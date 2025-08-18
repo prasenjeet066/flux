@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { build } from 'esbuild';
-import { rm, mkdir, copy } from 'fs-extra';
+import fs from 'fs-extra';
 import { join } from 'path';
 import chalk from 'chalk';
 
@@ -10,8 +10,8 @@ async function main() {
   
   try {
     // Clean dist directory
-    await rm('dist', { force: true, recursive: true });
-    await mkdir('dist');
+    await fs.rm('dist', { force: true, recursive: true });
+    await fs.mkdir('dist');
     
     // Build with esbuild
     const result = await build({
@@ -28,6 +28,7 @@ async function main() {
       ],
       bundle: true,
       format: 'esm',
+      platform: 'node',
       target: 'node18',
       outdir: 'dist',
       sourcemap: true,
@@ -50,13 +51,13 @@ async function main() {
     }
     
     // Copy CLI binary
-    await copy('bin', 'dist/bin');
+    await fs.copy('bin', 'dist/bin');
     
     // Copy package.json
-    await copy('package.json', 'dist/package.json');
+    await fs.copy('package.json', 'dist/package.json');
     
     // Copy README
-    await copy('readme.md', 'dist/README.md');
+    await fs.copy('readme.md', 'dist/README.md');
     
     // Create main index.js
     const mainIndex = `export { FluxCompiler } from './compiler/index.js';
@@ -69,7 +70,7 @@ export { createProject } from './cli/create-project.js';
 export { devServer } from './cli/dev-server.js';
 `;
     
-    await writeFile('dist/index.js', mainIndex);
+    await fs.writeFile('dist/index.js', mainIndex);
     
     // Create CLI entry point
     const cliIndex = `#!/usr/bin/env node
@@ -80,16 +81,16 @@ import { devServer } from './cli/dev-server.js';
 export { FluxCompiler, createProject, devServer };
 `;
     
-    await writeFile('dist/cli.js', cliIndex);
+    await fs.writeFile('dist/cli.js', cliIndex);
     
     // Update package.json for distribution
-    const packageJson = JSON.parse(await readFile('package.json', 'utf8'));
+    const packageJson = JSON.parse(await fs.readFile('package.json', 'utf8'));
     packageJson.main = './index.js';
     packageJson.bin = {
       'flux': './bin/flux.js'
     };
     
-    await writeFile('dist/package.json', JSON.stringify(packageJson, null, 2));
+    await fs.writeFile('dist/package.json', JSON.stringify(packageJson, null, 2));
     
     console.log(chalk.green('✅ Build completed successfully!'));
     console.log(chalk.cyan('📦 Output directory: dist/'));
@@ -116,17 +117,7 @@ export { FluxCompiler, createProject, devServer };
   }
 }
 
-// Helper function to write files
-async function writeFile(path, content) {
-  const fs = await import('fs-extra');
-  await fs.writeFile(path, content);
-}
 
-// Helper function to read files
-async function readFile(path, encoding) {
-  const fs = await import('fs-extra');
-  return fs.readFile(path, encoding);
-}
 
 // Run build
 main().catch(error => {
