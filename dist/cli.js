@@ -16,14 +16,15 @@ program
   .action(async (name, options) => {
     try {
       const { createProject } = await import('./cli/create-project.js');
-      console.log(chalk.blue(`🚀 Creating new Flux project: ${name}`));
+      console.log(chalk.blue('[cli] Creating new Flux project: ' + name));
       await createProject(name, options.template);
-      console.log(chalk.green(`✅ Project ${name} created successfully!`));
-      console.log(chalk.cyan('\nNext steps:'));
-      console.log(chalk.cyan(`  cd ${name}`));
+      console.log(chalk.green('[cli] Project ' + name + ' created successfully'));
+      console.log(chalk.cyan('
+[cli] Next steps:'));
+      console.log(chalk.cyan('  cd ' + name));
       console.log(chalk.cyan('  flux dev'));
     } catch (error) {
-      console.error(chalk.red(`❌ Error creating project: ${error.message}`));
+      console.error(chalk.red('[cli] Error creating project: ' + error.message));
       process.exit(1);
     }
   });
@@ -36,10 +37,10 @@ program
   .action(async (options) => {
     try {
       const { devServer } = await import('./cli/dev-server.js');
-      console.log(chalk.blue(`🌐 Starting Flux dev server on ${options.host}:${options.port}`));
+      console.log(chalk.blue('[cli] Starting Flux dev server on ' + options.host + ':' + options.port));
       await devServer(options);
     } catch (error) {
-      console.error(chalk.red(`❌ Error starting dev server: ${error.message}`));
+      console.error(chalk.red('[cli] Error starting dev server: ' + error.message));
       process.exit(1);
     }
   });
@@ -53,17 +54,17 @@ program
   .action(async (options) => {
     try {
       const { FluxCompiler } = await import('./compiler/index.js');
-      console.log(chalk.blue('🔨 Building project...'));
+      console.log(chalk.blue('[cli] Building project...'));
       const compiler = new FluxCompiler({
         minify: options.minify,
         sourceMaps: options.sourceMaps,
         outputDir: options.output
       });
       await compiler.build();
-      console.log(chalk.green('✅ Build completed successfully!'));
-      console.log(chalk.cyan(`Output: ${options.output}`));
+      console.log(chalk.green('[cli] Build completed successfully'));
+      console.log(chalk.cyan('[cli] Output: ' + options.output));
     } catch (error) {
-      console.error(chalk.red(`❌ Build failed: ${error.message}`));
+      console.error(chalk.red('[cli] Build failed: ' + error.message));
       process.exit(1);
     }
   });
@@ -76,18 +77,19 @@ program
   .action(async (file, options) => {
     try {
       const { FluxCompiler } = await import('./compiler/index.js');
-      console.log(chalk.blue(`⚡ Compiling ${file}...`));
+      console.log(chalk.blue('[cli] Compiling ' + file + '...'));
       const compiler = new FluxCompiler({ target: options.target });
       const result = await compiler.compileFile(file);
       if (options.output) {
         await compiler.writeOutput(result, options.output);
-        console.log(chalk.green(`✅ Compiled to ${options.output}`));
+        console.log(chalk.green('[cli] Compiled to ' + options.output));
       } else {
-        console.log(chalk.cyan('\n--- Compiled Output ---'));
+        console.log(chalk.cyan('
+[cli] --- Compiled Output ---'));
         console.log(result);
       }
     } catch (error) {
-      console.error(chalk.red(`❌ Compilation failed: ${error.message}`));
+      console.error(chalk.red('[cli] Compilation failed: ' + error.message));
       process.exit(1);
     }
   });
