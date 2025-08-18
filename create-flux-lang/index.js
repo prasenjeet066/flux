@@ -18,14 +18,14 @@ async function run() {
         console.log(chalk.blue(`🚀 Creating new Flux project: ${name}`));
         await createProject(name, options.template);
 
-        // Pin flux-lang dependency to ^2 in generated project
+        // Pin flux-lang dependency to ^2.0.3 in generated project
         try {
           const projectDir = path.resolve(process.cwd(), name);
           const pkgPath = path.join(projectDir, 'package.json');
           if (await fs.pathExists(pkgPath)) {
             const pkg = JSON.parse(await fs.readFile(pkgPath, 'utf8'));
             pkg.dependencies = pkg.dependencies || {};
-            pkg.dependencies['flux-lang'] = '^2.0.0';
+            pkg.dependencies['flux-lang'] = '^2.0.3';
             await fs.writeFile(pkgPath, JSON.stringify(pkg, null, 2));
           }
         } catch {}
