@@ -18,6 +18,7 @@ jobs:
       # Use npm ci if package-lock.json exists, otherwise use npm install
       - run: |
           if [ -f package-lock.json ]; then
+            npm install 
             npm ci
           else
             npm install
@@ -40,6 +41,7 @@ jobs:
       # Use npm ci if package-lock.json exists, otherwise use npm install
       - run: |
           if [ -f package-lock.json ]; then
+            npm install 
             npm ci
           else
             npm install
