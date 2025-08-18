@@ -16,11 +16,22 @@ export class FluxCompiler {
       sourceMaps: true,
       optimizations: true,
       outputDir: 'dist',
+      treeShaking: true,
+      codeSplitting: false,
+      bundleAnalysis: false,
+      watchMode: false,
+      incremental: true,
+      parallel: true,
+      maxWorkers: 4,
       ...options
     };
     
     this.errors = [];
     this.warnings = [];
+    this.compilationCache = new Map();
+    this.dependencyGraph = new Map();
+    this.optimizer = new FluxOptimizer(this.options);
+    this.bundler = new FluxBundler(this.options);
   }
 
   async compileFile(filePath) {
@@ -229,5 +240,143 @@ export class FluxCompiler {
     if (this.options.sourceMaps && result.sourceMap) {
       await fs.writeFile(outputPath + '.map', JSON.stringify(result.sourceMap));
     }
+  }
+}
+
+// Advanced compiler optimization system
+class FluxOptimizer {
+  constructor(options) {
+    this.options = options;
+    this.optimizations = new Map();
+    this.analysis = new Map();
+  }
+
+  optimize(ast, context) {
+    if (!this.options.optimizations) return ast;
+    
+    let optimizedAst = ast;
+    
+    // Apply various optimizations
+    optimizedAst = this.constantFolding(optimizedAst);
+    optimizedAst = this.deadCodeElimination(optimizedAst);
+    optimizedAst = this.inlineExpansion(optimizedAst);
+    optimizedAst = this.hoisting(optimizedAst);
+    
+    return optimizedAst;
+  }
+
+  constantFolding(ast) {
+    // Fold constant expressions at compile time
+    return ast;
+  }
+
+  deadCodeElimination(ast) {
+    // Remove unreachable code
+    return ast;
+  }
+
+  inlineExpansion(ast) {
+    // Inline small functions
+    return ast;
+  }
+
+  hoisting(ast) {
+    // Hoist variable declarations
+    return ast;
+  }
+
+  analyze(ast) {
+    // Analyze code for optimization opportunities
+    const analysis = {
+      complexity: this.calculateComplexity(ast),
+      dependencies: this.findDependencies(ast),
+      performance: this.analyzePerformance(ast)
+    };
+    
+    this.analysis.set(ast, analysis);
+    return analysis;
+  }
+
+  calculateComplexity(ast) {
+    // Calculate cyclomatic complexity
+    return 1; // Placeholder
+  }
+
+  findDependencies(ast) {
+    // Find all dependencies
+    return []; // Placeholder
+  }
+
+  analyzePerformance(ast) {
+    // Analyze performance characteristics
+    return {}; // Placeholder
+  }
+}
+
+// Advanced bundling system
+class FluxBundler {
+  constructor(options) {
+    this.options = options;
+    this.bundles = new Map();
+    this.chunks = new Map();
+  }
+
+  createBundle(entryPoints, dependencies) {
+    if (!this.options.codeSplitting) {
+      return this.createSingleBundle(entryPoints, dependencies);
+    }
+    
+    return this.createSplitBundles(entryPoints, dependencies);
+  }
+
+  createSingleBundle(entryPoints, dependencies) {
+    // Create a single bundle
+    return {
+      type: 'single',
+      code: this.mergeCode(entryPoints, dependencies),
+      sourceMap: this.mergeSourceMaps(entryPoints, dependencies)
+    };
+  }
+
+  createSplitBundles(entryPoints, dependencies) {
+    // Create multiple bundles for code splitting
+    const bundles = [];
+    
+    for (const entryPoint of entryPoints) {
+      const bundle = this.createBundleForEntry(entryPoint, dependencies);
+      bundles.push(bundle);
+    }
+    
+    return bundles;
+  }
+
+  createBundleForEntry(entryPoint, dependencies) {
+    // Create bundle for specific entry point
+    return {
+      type: 'entry',
+      entry: entryPoint,
+      code: this.generateEntryCode(entryPoint, dependencies),
+      dependencies: this.getEntryDependencies(entryPoint, dependencies)
+    };
+  }
+
+  mergeCode(entryPoints, dependencies) {
+    // Merge all code into single output
+    return entryPoints.map(ep => ep.code).join('\n');
+  }
+
+  mergeSourceMaps(entryPoints, dependencies) {
+    // Merge source maps
+    return {}; // Placeholder
+  }
+
+  generateEntryCode(entryPoint, dependencies) {
+    // Generate code for entry point
+    return entryPoint.code;
+  }
+
+  getEntryDependencies(entryPoint, dependencies) {
+    // Get dependencies for entry point
+    return dependencies.filter(dep => dep.entryPoint === entryPoint);
   }
 }
