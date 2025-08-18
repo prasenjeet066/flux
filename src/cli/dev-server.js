@@ -5,6 +5,7 @@ import { createServer } from 'http';
 import { createReadStream } from 'fs';
 import { stat, readFile, readdir, access } from 'fs/promises';
 import { extname, join, resolve } from 'path';
+import fs from 'fs-extra';
 import { FluxCompiler } from '../compiler/index.js';
 import { configManager } from '../config/index.js';
 import { storageManager } from '../storage/index.js';
@@ -39,17 +40,26 @@ export async function devServer(options = {}) {
   console.log(chalk.blue('🚀 Starting Flux Development Server...'));
   
   try {
-    // Initialize configuration system
-    console.log(chalk.blue('📋 Loading configuration...'));
-    await configManager.loadConfiguration();
+    // Initialize configuration system only if config file exists
+    const configPath = path.resolve(root, 'flux.config.js');
+    if (await fs.pathExists(configPath)) {
+      console.log(chalk.blue('📋 Loading configuration...'));
+      await configManager.loadConfiguration();
+    } else {
+      console.log(chalk.yellow('⚠️  No flux.config.js found, using default configuration'));
+    }
     
-    // Initialize storage system
-    console.log(chalk.blue('💾 Initializing storage system...'));
-    await storageManager.initializeStorage();
+    // Initialize storage system only if needed
+    try {
+      console.log(chalk.blue('💾 Initializing storage system...'));
+      await storageManager.initializeStorage();
+    } catch (error) {
+      console.log(chalk.yellow('⚠️  Storage system not available, continuing without storage'));
+    }
     
-    // Get configuration values
-    const configPort = configManager.get('server.port', port);
-    const configHost = configManager.get('server.host', host);
+    // Get configuration values (use defaults if no config loaded)
+    const configPort = configManager.loaded ? configManager.get('server.port', port) : port;
+    const configHost = configManager.loaded ? configManager.get('server.host', host) : host;
     const finalPort = port || configPort;
     const finalHost = host || configHost;
     
@@ -176,7 +186,7 @@ export async function devServer(options = {}) {
   server.listen(finalPort, finalHost, () => {
     console.log(chalk.green(`🚀 Flux dev server running at http://${finalHost}:${finalPort}`));
     console.log(chalk.cyan(`📁 Serving from: ${root}`));
-    console.log(chalk.blue(`💾 Storage: ${configManager.get('storage.type', 'local')}`));
+    console.log(chalk.blue(`💾 Storage: ${configManager.loaded ? configManager.get('storage.type', 'local') : 'none'}`));
     console.log(chalk.yellow(`⚡ Hot reload: ${hot ? 'enabled' : 'disabled'}`));
     console.log(chalk.gray(`Press Ctrl+C to stop`));
   });

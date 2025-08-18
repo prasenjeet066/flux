@@ -23,7 +23,7 @@ class ConfigManager {
     this.loaded = false;
     this.watchers = new Map();
     
-    this.loadConfiguration();
+    // Don't auto-load configuration - let it be called explicitly
   }
 
   async loadConfiguration() {

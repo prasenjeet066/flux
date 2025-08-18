@@ -10,6 +10,7 @@ import { createServer } from "http";
 import { createReadStream } from "fs";
 import { stat, readFile, readdir, access } from "fs/promises";
 import { extname, join, resolve } from "path";
+import fs4 from "fs-extra";
 
 // src/compiler/lexer.js
 var FluxLexer = class _FluxLexer {
@@ -1668,8 +1669,8 @@ var FluxCodeGenerator = class {
     this.addLine(`${componentName}.displayName = '${componentName}';`);
     const routeDecorator = node.decorators.find((d) => d.name.name === "route");
     if (routeDecorator) {
-      const path4 = routeDecorator.arguments[0];
-      this.addLine(`FluxRuntime.registerRoute(${this.visit(path4)}, ${componentName});`);
+      const path5 = routeDecorator.arguments[0];
+      this.addLine(`FluxRuntime.registerRoute(${this.visit(path5)}, ${componentName});`);
     }
   }
   visitStoreDeclaration(node) {
@@ -1992,7 +1993,7 @@ var FluxError = class extends Error {
 
 // src/compiler/index.js
 import fs from "fs-extra";
-import path from "path";
+import path2 from "path";
 var FluxCompiler = class {
   constructor(options = {}) {
     this.options = {
@@ -2098,7 +2099,7 @@ var FluxCompiler = class {
     async function scan(dir) {
       const entries = await fs.readdir(dir, { withFileTypes: true });
       for (const entry of entries) {
-        const fullPath = path.join(dir, entry.name);
+        const fullPath = path2.join(dir, entry.name);
         if (entry.isDirectory() && !entry.name.startsWith(".") && entry.name !== "node_modules") {
           await scan(fullPath);
         } else if (entry.isFile() && entry.name.endsWith(".flux")) {
@@ -2110,7 +2111,7 @@ var FluxCompiler = class {
     return files;
   }
   async loadConfig(projectRoot) {
-    const configPath = path.join(projectRoot, "flux.config.js");
+    const configPath = path2.join(projectRoot, "flux.config.js");
     try {
       if (await fs.pathExists(configPath)) {
         const config = await import(configPath);
@@ -2122,30 +2123,30 @@ var FluxCompiler = class {
     return {};
   }
   async writeBuildOutput(results, projectRoot) {
-    const outputDir = path.join(projectRoot, this.options.outputDir);
+    const outputDir = path2.join(projectRoot, this.options.outputDir);
     await fs.ensureDir(outputDir);
     for (const result of results) {
-      const relativePath = path.relative(projectRoot, result.filePath);
-      const outputPath = path.join(
+      const relativePath = path2.relative(projectRoot, result.filePath);
+      const outputPath = path2.join(
         outputDir,
         relativePath.replace(/\.flux$/, ".js")
       );
-      await fs.ensureDir(path.dirname(outputPath));
+      await fs.ensureDir(path2.dirname(outputPath));
       await fs.writeFile(outputPath, result.output);
       if (this.options.sourceMaps && result.sourceMap) {
         await fs.writeFile(outputPath + ".map", JSON.stringify(result.sourceMap));
       }
     }
     await this.writeRuntimeFiles(outputDir);
-    const indexPath = path.join(outputDir, "index.html");
+    const indexPath = path2.join(outputDir, "index.html");
     if (!await fs.pathExists(indexPath)) {
       await this.writeDefaultIndexHtml(indexPath);
     }
   }
   async writeRuntimeFiles(outputDir) {
-    const runtimeDir = path.join(outputDir, "runtime");
+    const runtimeDir = path2.join(outputDir, "runtime");
     await fs.ensureDir(runtimeDir);
-    const runtimeSource = path.join(__dirname, "../runtime");
+    const runtimeSource = path2.join(__dirname, "../runtime");
     await fs.copy(runtimeSource, runtimeDir);
   }
   async writeDefaultIndexHtml(outputPath) {
@@ -2164,7 +2165,7 @@ var FluxCompiler = class {
     await fs.writeFile(outputPath, html);
   }
   async writeOutput(result, outputPath) {
-    await fs.ensureDir(path.dirname(outputPath));
+    await fs.ensureDir(path2.dirname(outputPath));
     await fs.writeFile(outputPath, result.output);
     if (this.options.sourceMaps && result.sourceMap) {
       await fs.writeFile(outputPath + ".map", JSON.stringify(result.sourceMap));
@@ -2268,10 +2269,10 @@ var FluxBundler = class {
 
 // src/config/index.js
 import fs2 from "fs-extra";
-import path2 from "path";
+import path3 from "path";
 import { fileURLToPath } from "url";
 var __filename = fileURLToPath(import.meta.url);
-var __dirname2 = path2.dirname(__filename);
+var __dirname2 = path3.dirname(__filename);
 var ConfigManager = class {
   constructor(options = {}) {
     this.options = {
@@ -2287,7 +2288,6 @@ var ConfigManager = class {
     this.secrets = /* @__PURE__ */ new Map();
     this.loaded = false;
     this.watchers = /* @__PURE__ */ new Map();
-    this.loadConfiguration();
   }
   async loadConfiguration() {
     try {
@@ -2306,7 +2306,7 @@ var ConfigManager = class {
     }
   }
   async loadEnvironmentVariables() {
-    const envPath = path2.resolve(this.options.secretsFile);
+    const envPath = path3.resolve(this.options.secretsFile);
     if (await fs2.pathExists(envPath)) {
       try {
         const envContent = await fs2.readFile(envPath, "utf-8");
@@ -2334,7 +2334,7 @@ var ConfigManager = class {
     return envVars;
   }
   async loadMainConfig() {
-    const configPath = path2.resolve(this.options.configDir, this.options.configFile);
+    const configPath = path3.resolve(this.options.configDir, this.options.configFile);
     if (await fs2.pathExists(configPath)) {
       try {
         const config = await import(configPath);
@@ -2349,7 +2349,7 @@ var ConfigManager = class {
     }
   }
   async loadEnvironmentConfig() {
-    const envConfigPath = path2.resolve(this.options.configDir, `${this.options.environment}.js`);
+    const envConfigPath = path3.resolve(this.options.configDir, `${this.options.environment}.js`);
     if (await fs2.pathExists(envConfigPath)) {
       try {
         const config = await import(envConfigPath);
@@ -2366,7 +2366,7 @@ var ConfigManager = class {
     }
   }
   async loadSecrets() {
-    const secretsPath = path2.resolve(this.options.configDir, "secrets.js");
+    const secretsPath = path3.resolve(this.options.configDir, "secrets.js");
     if (await fs2.pathExists(secretsPath)) {
       try {
         const secrets = await import(secretsPath);
@@ -2451,8 +2451,8 @@ var ConfigManager = class {
     const config = this.config.get("environment");
     return this.getNestedValue(config, key, defaultValue);
   }
-  getNestedValue(obj, path4, defaultValue) {
-    const keys = path4.split(".");
+  getNestedValue(obj, path5, defaultValue) {
+    const keys = path5.split(".");
     let current = obj;
     for (const key of keys) {
       if (current && typeof current === "object" && key in current) {
@@ -2467,8 +2467,8 @@ var ConfigManager = class {
     const config = this.config.get("environment");
     this.setNestedValue(config, key, value);
   }
-  setNestedValue(obj, path4, value) {
-    const keys = path4.split(".");
+  setNestedValue(obj, path5, value) {
+    const keys = path5.split(".");
     const lastKey = keys.pop();
     let current = obj;
     for (const key of keys) {
@@ -2587,7 +2587,7 @@ var configManager = new ConfigManager();
 
 // src/storage/index.js
 import fs3 from "fs-extra";
-import path3 from "path";
+import path4 from "path";
 import { fileURLToPath as fileURLToPath2 } from "url";
 
 // src/runtime/index.js
@@ -2788,9 +2788,9 @@ var Router = class {
       this.currentPath = "/";
     }
   }
-  registerRoute(path4, component, options = {}) {
-    const routePattern = this.pathToRegex(path4);
-    this.routes.set(path4, {
+  registerRoute(path5, component, options = {}) {
+    const routePattern = this.pathToRegex(path5);
+    this.routes.set(path5, {
       pattern: routePattern,
       component,
       guards: options.guards || [],
@@ -2801,19 +2801,19 @@ var Router = class {
   registerGuard(name, guardFn) {
     this.guards.set(name, guardFn);
   }
-  pathToRegex(path4) {
-    const pattern = path4.replace(/\//g, "\\/").replace(/:([^\/]+)/g, "(?<$1>[^/]+)").replace(/\*/g, ".*");
+  pathToRegex(path5) {
+    const pattern = path5.replace(/\//g, "\\/").replace(/:([^\/]+)/g, "(?<$1>[^/]+)").replace(/\*/g, ".*");
     return new RegExp(`^${pattern}$`);
   }
-  async navigate(path4, replace = false) {
-    const route = this.findRoute(path4);
+  async navigate(path5, replace = false) {
+    const route = this.findRoute(path5);
     if (!route) {
-      console.warn(`No route found for path: ${path4}`);
+      console.warn(`No route found for path: ${path5}`);
       return;
     }
     for (const guardName of route.guards) {
       const guard = this.guards.get(guardName);
-      if (guard && !await guard(route, path4)) {
+      if (guard && !await guard(route, path5)) {
         return;
       }
     }
@@ -2823,19 +2823,19 @@ var Router = class {
     }
     if (isBrowser) {
       if (replace) {
-        window.history.replaceState({ path: path4 }, "", path4);
+        window.history.replaceState({ path: path5 }, "", path5);
       } else {
-        window.history.pushState({ path: path4 }, "", path4);
+        window.history.pushState({ path: path5 }, "", path5);
       }
     } else {
-      this.currentPath = path4;
+      this.currentPath = path5;
     }
     this.currentRoute = route;
     this.renderCurrentRoute(data);
   }
-  findRoute(path4) {
+  findRoute(path5) {
     for (const [routePath, route] of this.routes) {
-      const match = path4.match(route.pattern);
+      const match = path5.match(route.pattern);
       if (match) {
         this.params = match.groups || {};
         return route;
@@ -2844,13 +2844,13 @@ var Router = class {
     return null;
   }
   async handleNavigation() {
-    let path4;
+    let path5;
     if (isBrowser) {
-      path4 = window.location.pathname;
+      path5 = window.location.pathname;
     } else {
-      path4 = this.currentPath || "/";
+      path5 = this.currentPath || "/";
     }
-    await this.navigate(path4, true);
+    await this.navigate(path5, true);
   }
   renderCurrentRoute(data = {}) {
     if (this.currentRoute) {
@@ -2902,14 +2902,14 @@ var FluxRuntime = class {
     }
     this.updateQueue.clear();
   }
-  static registerRoute(path4, component, options) {
-    this.router.registerRoute(path4, component, options);
+  static registerRoute(path5, component, options) {
+    this.router.registerRoute(path5, component, options);
   }
   static registerGuard(name, guardFn) {
     this.router.registerGuard(name, guardFn);
   }
-  static navigate(path4, replace = false) {
-    return this.router.navigate(path4, replace);
+  static navigate(path5, replace = false) {
+    return this.router.navigate(path5, replace);
   }
   static mount(component, container) {
     if (isBrowser) {
@@ -3020,7 +3020,7 @@ var FluxCache = class {
 
 // src/storage/index.js
 var __filename2 = fileURLToPath2(import.meta.url);
-var __dirname3 = path3.dirname(__filename2);
+var __dirname3 = path4.dirname(__filename2);
 var StorageManager = class {
   constructor(options = {}) {
     this.options = {
@@ -3035,10 +3035,10 @@ var StorageManager = class {
       ...options
     };
     this.cache = this.options.cache ? new FluxCache() : null;
-    this.storageRoot = path3.resolve(this.options.basePath);
-    this.publicPath = path3.join(this.storageRoot, this.options.publicPath);
-    this.uploadsPath = path3.join(this.storageRoot, this.options.uploadsPath);
-    this.tempPath = path3.join(this.storageRoot, this.options.tempPath);
+    this.storageRoot = path4.resolve(this.options.basePath);
+    this.publicPath = path4.join(this.storageRoot, this.options.publicPath);
+    this.uploadsPath = path4.join(this.storageRoot, this.options.uploadsPath);
+    this.tempPath = path4.join(this.storageRoot, this.options.tempPath);
     this.initializeStorage();
   }
   async initializeStorage() {
@@ -3047,15 +3047,15 @@ var StorageManager = class {
       await fs3.ensureDir(this.publicPath);
       await fs3.ensureDir(this.uploadsPath);
       await fs3.ensureDir(this.tempPath);
-      await fs3.ensureDir(path3.join(this.publicPath, "images"));
-      await fs3.ensureDir(path3.join(this.publicPath, "css"));
-      await fs3.ensureDir(path3.join(this.publicPath, "js"));
-      await fs3.ensureDir(path3.join(this.publicPath, "fonts"));
-      await fs3.ensureDir(path3.join(this.publicPath, "documents"));
-      await fs3.ensureDir(path3.join(this.uploadsPath, "images"));
-      await fs3.ensureDir(path3.join(this.uploadsPath, "documents"));
-      await fs3.ensureDir(path3.join(this.uploadsPath, "videos"));
-      await fs3.ensureDir(path3.join(this.uploadsPath, "audio"));
+      await fs3.ensureDir(path4.join(this.publicPath, "images"));
+      await fs3.ensureDir(path4.join(this.publicPath, "css"));
+      await fs3.ensureDir(path4.join(this.publicPath, "js"));
+      await fs3.ensureDir(path4.join(this.publicPath, "fonts"));
+      await fs3.ensureDir(path4.join(this.publicPath, "documents"));
+      await fs3.ensureDir(path4.join(this.uploadsPath, "images"));
+      await fs3.ensureDir(path4.join(this.uploadsPath, "documents"));
+      await fs3.ensureDir(path4.join(this.uploadsPath, "videos"));
+      await fs3.ensureDir(path4.join(this.uploadsPath, "audio"));
       console.log("\u2705 Storage system initialized successfully");
     } catch (error) {
       console.error("\u274C Failed to initialize storage:", error);
@@ -3075,11 +3075,11 @@ var StorageManager = class {
         await this.validateFile(file);
       }
       const destPath = destination === "public" ? this.publicPath : this.uploadsPath;
-      const finalPath = path3.join(destPath, subfolder, filename);
+      const finalPath = path4.join(destPath, subfolder, filename);
       if (await fs3.pathExists(finalPath) && !overwrite) {
         throw new Error(`File ${filename} already exists`);
       }
-      await fs3.ensureDir(path3.dirname(finalPath));
+      await fs3.ensureDir(path4.dirname(finalPath));
       await fs3.copy(file.path || file, finalPath);
       const stats = await fs3.stat(finalPath);
       const fileInfo = {
@@ -3109,7 +3109,7 @@ var StorageManager = class {
         if (cached) return cached;
       }
       const destPath = destination === "public" ? this.publicPath : this.uploadsPath;
-      const filePath = path3.join(destPath, filename);
+      const filePath = path4.join(destPath, filename);
       if (!await fs3.pathExists(filePath)) {
         throw new Error(`File ${filename} not found`);
       }
@@ -3135,7 +3135,7 @@ var StorageManager = class {
   async deleteFile(filename, destination = "uploads") {
     try {
       const destPath = destination === "public" ? this.publicPath : this.uploadsPath;
-      const filePath = path3.join(destPath, filename);
+      const filePath = path4.join(destPath, filename);
       if (!await fs3.pathExists(filePath)) {
         throw new Error(`File ${filename} not found`);
       }
@@ -3158,7 +3158,7 @@ var StorageManager = class {
     } = options;
     try {
       const destPath = destination === "public" ? this.publicPath : this.uploadsPath;
-      const searchPath = path3.join(destPath, subfolder);
+      const searchPath = path4.join(destPath, subfolder);
       if (!await fs3.pathExists(searchPath)) {
         return [];
       }
@@ -3173,7 +3173,7 @@ var StorageManager = class {
             return file.name.includes(filter);
           }
           if (filter.extension) {
-            return path3.extname(file.name) === filter.extension;
+            return path4.extname(file.name) === filter.extension;
           }
           if (filter.mimeType) {
             return file.mimeType.startsWith(filter.mimeType);
@@ -3209,8 +3209,8 @@ var StorageManager = class {
     try {
       const entries = await fs3.readdir(dirPath, { withFileTypes: true });
       for (const entry of entries) {
-        const fullPath = path3.join(dirPath, entry.name);
-        const relativePath = path3.relative(this.storageRoot, fullPath);
+        const fullPath = path4.join(dirPath, entry.name);
+        const relativePath = path4.relative(this.storageRoot, fullPath);
         if (entry.isDirectory() && recursive) {
           const subFiles = await this.scanDirectory(fullPath, recursive);
           files.push(...subFiles);
@@ -3235,12 +3235,12 @@ var StorageManager = class {
   }
   // Public file serving
   getPublicUrl(filePath) {
-    const relativePath = path3.relative(this.storageRoot, filePath);
+    const relativePath = path4.relative(this.storageRoot, filePath);
     return `/storage/${relativePath.replace(/\\/g, "/")}`;
   }
   async servePublicFile(filePath) {
     try {
-      const fullPath = path3.join(this.storageRoot, filePath);
+      const fullPath = path4.join(this.storageRoot, filePath);
       if (!await fs3.pathExists(fullPath)) {
         throw new Error("File not found");
       }
@@ -3276,7 +3276,7 @@ var StorageManager = class {
   }
   // Utility methods
   getMimeType(filename) {
-    const ext = path3.extname(filename).toLowerCase();
+    const ext = path4.extname(filename).toLowerCase();
     const mimeTypes = {
       ".html": "text/html",
       ".css": "text/css",
@@ -3335,7 +3335,7 @@ var StorageManager = class {
       }
       const files = await this.scanDirectory(dirPath, true);
       const totalSize = files.reduce((sum, file) => sum + file.size, 0);
-      const directories = new Set(files.map((f) => path3.dirname(f.relativePath))).size;
+      const directories = new Set(files.map((f) => path4.dirname(f.relativePath))).size;
       return {
         files: files.length,
         size: totalSize,
@@ -3367,7 +3367,7 @@ var StorageManager = class {
   // Backup and restore
   async createBackup(backupPath) {
     try {
-      await fs3.ensureDir(path3.dirname(backupPath));
+      await fs3.ensureDir(path4.dirname(backupPath));
       await fs3.copy(this.storageRoot, backupPath);
       return { success: true, backupPath };
     } catch (error) {
@@ -3381,7 +3381,7 @@ var StorageManager = class {
         throw new Error("Backup path does not exist");
       }
       const timestamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
-      const currentBackup = path3.join(path3.dirname(this.storageRoot), `backup-before-restore-${timestamp}`);
+      const currentBackup = path4.join(path4.dirname(this.storageRoot), `backup-before-restore-${timestamp}`);
       await this.createBackup(currentBackup);
       await fs3.remove(this.storageRoot);
       await fs3.copy(backupPath, this.storageRoot);
@@ -3422,12 +3422,21 @@ async function devServer(options = {}) {
   } = options;
   console.log(chalk.blue("\u{1F680} Starting Flux Development Server..."));
   try {
-    console.log(chalk.blue("\u{1F4CB} Loading configuration..."));
-    await configManager.loadConfiguration();
-    console.log(chalk.blue("\u{1F4BE} Initializing storage system..."));
-    await storageManager.initializeStorage();
-    const configPort = configManager.get("server.port", port);
-    const configHost = configManager.get("server.host", host);
+    const configPath = path.resolve(root, "flux.config.js");
+    if (await fs4.pathExists(configPath)) {
+      console.log(chalk.blue("\u{1F4CB} Loading configuration..."));
+      await configManager.loadConfiguration();
+    } else {
+      console.log(chalk.yellow("\u26A0\uFE0F  No flux.config.js found, using default configuration"));
+    }
+    try {
+      console.log(chalk.blue("\u{1F4BE} Initializing storage system..."));
+      await storageManager.initializeStorage();
+    } catch (error) {
+      console.log(chalk.yellow("\u26A0\uFE0F  Storage system not available, continuing without storage"));
+    }
+    const configPort = configManager.loaded ? configManager.get("server.port", port) : port;
+    const configHost = configManager.loaded ? configManager.get("server.host", host) : host;
     const finalPort = port || configPort;
     const finalHost = host || configHost;
     const compiler = new FluxCompiler({
@@ -3523,7 +3532,7 @@ async function devServer(options = {}) {
     server.listen(finalPort, finalHost, () => {
       console.log(chalk.green(`\u{1F680} Flux dev server running at http://${finalHost}:${finalPort}`));
       console.log(chalk.cyan(`\u{1F4C1} Serving from: ${root}`));
-      console.log(chalk.blue(`\u{1F4BE} Storage: ${configManager.get("storage.type", "local")}`));
+      console.log(chalk.blue(`\u{1F4BE} Storage: ${configManager.loaded ? configManager.get("storage.type", "local") : "none"}`));
       console.log(chalk.yellow(`\u26A1 Hot reload: ${hot ? "enabled" : "disabled"}`));
       console.log(chalk.gray(`Press Ctrl+C to stop`));
     });
