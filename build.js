@@ -97,7 +97,7 @@ program
       console.log(chalk.blue(\`🚀 Creating new Flux project: \${name}\`));
       await createProject(name, options.template);
       console.log(chalk.green(\`✅ Project \${name} created successfully!\`));
-      console.log(chalk.cyan('\nNext steps:'));
+      console.log(chalk.cyan('\\nNext steps:'));
       console.log(chalk.cyan(\`  cd \${name}\`));
       console.log(chalk.cyan('  flux dev'));
     } catch (error) {
@@ -161,7 +161,7 @@ program
         await compiler.writeOutput(result, options.output);
         console.log(chalk.green(\`✅ Compiled to \${options.output}\`));
       } else {
-        console.log(chalk.cyan('\n--- Compiled Output ---'));
+        console.log(chalk.cyan('\\n--- Compiled Output ---'));
         console.log(result);
       }
     } catch (error) {
