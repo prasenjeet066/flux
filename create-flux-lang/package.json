@@ -1,0 +1,31 @@
+{
+  "name": "create-flux-lang",
+  "version": "1.0.0",
+  "description": "Create a new Flux project from the command line",
+  "type": "module",
+  "bin": {
+    "create-flux-lang": "./index.js"
+  },
+  "keywords": [
+    "flux",
+    "scaffold",
+    "initializer",
+    "create",
+    "template"
+  ],
+  "author": "Flux Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "flux-lang": ">=2.0.2",
+    "chalk": "^5.3.0",
+    "commander": "^11.1.0",
+    "fs-extra": "^11.2.0"
+  },
+  "files": [
+    "index.js",
+    "README.md"
+  ]
+}
