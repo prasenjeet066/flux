@@ -72,7 +72,7 @@ export class FluxCompiler {
       
       // Parse
       const parser = new FluxParser(tokens);
-      const ast = parser.parse();
+      const ast = parser.program();
       
       if (parser.errors.length > 0) {
         this.errors.push(...parser.errors);

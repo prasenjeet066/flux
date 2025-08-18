@@ -468,190 +468,11 @@ class Computed {
 // Global effect tracking
 let currentEffect = null;
 
-// Global component tracking
-let currentComponent = null;
 
-// Virtual DOM implementation
-class VNode {
-  constructor(type, props, children) {
-    this.type = type;
-    this.props = props || {};
-    this.children = children || [];
-    this.key = props?.key;
-    this.ref = props?.ref;
-  }
-}
 
-class VirtualDOM {
-  constructor() {
-    this.rootNode = null;
-    this.componentInstances = new WeakMap();
-  }
 
-  createElement(type, props, ...children) {
-    // Flatten children array
-    const flatChildren = children.flat().filter(child => 
-      child != null && child !== false && child !== true
-    );
-    
-    return new VNode(type, props, flatChildren);
-  }
 
-  render(vnode, container) {
-    const newDomNode = this.createDOMNode(vnode);
-    
-    if (container.firstChild) {
-      this.updateDOMNode(container.firstChild, newDomNode);
-    } else {
-      container.appendChild(newDomNode);
-    }
-    
-    this.rootNode = newDomNode;
-  }
 
-  createDOMNode(vnode) {
-    if (typeof vnode === 'string' || typeof vnode === 'number') {
-      return document.createTextNode(String(vnode));
-    }
-
-    if (typeof vnode.type === 'string') {
-      // HTML element
-      const element = document.createElement(vnode.type);
-      
-      // Set properties
-      for (const [key, value] of Object.entries(vnode.props)) {
-        if (key === 'key' || key === 'ref') continue;
-        
-        if (key.startsWith('on') && typeof value === 'function') {
-          // Event listener
-          const eventName = key.slice(2).toLowerCase();
-          element.addEventListener(eventName, value);
-        } else if (key === 'className') {
-          element.className = value;
-        } else if (key === 'style' && typeof value === 'object') {
-          Object.assign(element.style, value);
-        } else {
-          element.setAttribute(key, value);
-        }
-      }
-      
-      // Append children
-      for (const child of vnode.children) {
-        const childNode = this.createDOMNode(child);
-        element.appendChild(childNode);
-      }
-      
-      return element;
-    } else if (typeof vnode.type === 'function') {
-      // Component
-      let instance = this.componentInstances.get(vnode.type);
-      
-      if (!instance) {
-        instance = new vnode.type(vnode.props);
-        this.componentInstances.set(vnode.type, instance);
-      } else {
-        // Update props
-        Object.assign(instance.props, vnode.props);
-      }
-      
-      const renderedVNode = instance.render();
-      return this.createDOMNode(renderedVNode);
-    }
-    
-    throw new Error(`Unknown vnode type: ${vnode.type}`);
-  }
-
-  updateDOMNode(oldNode, newNode) {
-    // Simple update strategy - replace node
-    if (oldNode.parentNode) {
-      oldNode.parentNode.replaceChild(newNode, oldNode);
-    }
-  }
-}
-
-// Component base class
-export class Component {
-  constructor(props = {}) {
-    this.props = props;
-    this.effects = [];
-    this.isMounted = false;
-    this.updateScheduled = false;
-  }
-
-  setState(newState) {
-    Object.assign(this.state, newState);
-    this.scheduleUpdate();
-  }
-
-  scheduleUpdate() {
-    if (!this.updateScheduled) {
-      this.updateScheduled = true;
-      FluxRuntime.scheduleUpdate(() => {
-        if (this.isMounted) {
-          this.forceUpdate();
-        }
-        this.updateScheduled = false;
-      });
-    }
-  }
-
-  forceUpdate() {
-    if (this.isMounted) {
-      const newVNode = this.render();
-      FluxRuntime.virtualDOM.render(newVNode, this.container);
-    }
-  }
-
-  mount(container) {
-    this.container = container;
-    this.isMounted = true;
-    
-    // Call lifecycle method
-    if (this.mounted) {
-      this.mounted();
-    }
-    
-    // Initial render
-    this.forceUpdate();
-  }
-
-  unmount() {
-    this.isMounted = false;
-    
-    // Cleanup effects
-    for (const effect of this.effects) {
-      effect.dispose();
-    }
-    this.effects = [];
-    
-    // Call lifecycle method
-    if (this.unmounted) {
-      this.unmounted();
-    }
-  }
-
-  render() {
-    return createElement('div', null, 'Override render method');
-  }
-}
-
-// Store base class
-export class Store {
-  constructor() {
-    this.subscribers = new Set();
-  }
-
-  subscribe(callback) {
-    this.subscribers.add(callback);
-    return () => this.subscribers.delete(callback);
-  }
-
-  notify() {
-    for (const callback of this.subscribers) {
-      callback();
-    }
-  }
-}
 
 // Virtual DOM implementation
 class VNode {
@@ -1004,7 +825,7 @@ class Router {
 }
 
 // Base Component class
-class Component {
+export class Component {
   constructor(props = {}) {
     this.props = props;
     this.state = {};
@@ -1122,7 +943,7 @@ class Component {
 }
 
 // Store class for state management
-class Store {
+export class Store {
   constructor() {
     this.state = {};
     this.actions = {};
@@ -1697,9 +1518,5 @@ export {
   Computed,
   VNode,
   VirtualDOM,
-  Router,
-  Component,
-  Store,
-  FluxCache,
-  FluxWebSocket
+  Router
 };

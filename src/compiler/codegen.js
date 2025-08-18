@@ -17,6 +17,7 @@ export class FluxCodeGenerator {
     this.imports = new Set();
     this.componentCount = 0;
     this.storeCount = 0;
+    this.errors = [];
   }
 
   generate(ast) {
