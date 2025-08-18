@@ -7,7 +7,7 @@ const program = new Command();
 program
   .name('flux')
   .description('Flux - Next-generation web programming language')
-  .version('2.0.2');
+  .version('2.0.3');
 
 program
   .command('new <name>')
@@ -19,8 +19,7 @@ program
       console.log(chalk.blue(`🚀 Creating new Flux project: ${name}`));
       await createProject(name, options.template);
       console.log(chalk.green(`✅ Project ${name} created successfully!`));
-      console.log(chalk.cyan('
-Next steps:'));
+      console.log(chalk.cyan('\nNext steps:'));
       console.log(chalk.cyan(`  cd ${name}`));
       console.log(chalk.cyan('  flux dev'));
     } catch (error) {
@@ -84,8 +83,7 @@ program
         await compiler.writeOutput(result, options.output);
         console.log(chalk.green(`✅ Compiled to ${options.output}`));
       } else {
-        console.log(chalk.cyan('
---- Compiled Output ---'));
+        console.log(chalk.cyan('\n--- Compiled Output ---'));
         console.log(result);
       }
     } catch (error) {
