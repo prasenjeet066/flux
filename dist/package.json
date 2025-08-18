@@ -1,6 +1,6 @@
 {
   "name": "flux-lang",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "A next-generation web programming language for ultra-fast rendering with advanced features",
   "main": "./index.js",
   "type": "module",
