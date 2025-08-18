@@ -3422,12 +3422,16 @@ async function devServer(options = {}) {
   } = options;
   console.log(chalk.blue("\u{1F680} Starting Flux Development Server..."));
   try {
-    const configPath = resolve(root, "flux.config.js");
-    if (await fs4.pathExists(configPath)) {
-      console.log(chalk.blue("\u{1F4CB} Loading configuration..."));
-      await configManager.loadConfiguration();
+    const appConfigPath = resolve(root, "src", "config", "config.js");
+    if (await fs4.pathExists(appConfigPath)) {
+      console.log(chalk.blue("\u{1F4CB} Loading application configuration..."));
+      try {
+        await configManager.loadConfiguration();
+      } catch (e) {
+        console.warn(chalk.yellow(`\u26A0\uFE0F  Config load failed (${e?.message || e}). Continuing with defaults.`));
+      }
     } else {
-      console.log(chalk.yellow("\u26A0\uFE0F  No flux.config.js found, using default configuration"));
+      console.log(chalk.yellow("\u26A0\uFE0F  No src/config/config.js found, using default configuration"));
     }
     try {
       console.log(chalk.blue("\u{1F4BE} Initializing storage system..."));

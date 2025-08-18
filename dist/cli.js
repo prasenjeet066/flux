@@ -7,7 +7,7 @@ const program = new Command();
 program
   .name('flux')
   .description('Flux - Next-generation web programming language')
-  .version('2.0.5');
+  .version('2.0.6');
 
 program
   .command('new <name>')
