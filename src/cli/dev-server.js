@@ -6,6 +6,8 @@ import { createReadStream } from 'fs';
 import { stat, readFile, readdir, access } from 'fs/promises';
 import { extname, join, resolve } from 'path';
 import { FluxCompiler } from '../compiler/index.js';
+import { configManager } from '../config/index.js';
+import { storageManager } from '../storage/index.js';
 import chalk from 'chalk';
 
 const MIME_TYPES = {
@@ -28,15 +30,36 @@ export async function devServer(options = {}) {
   const {
     port = 3000,
     host = 'localhost',
-    root = process.cwd()
+    root = process.cwd(),
+    hot = false,
+    analyze = false,
+    profile = false
   } = options;
   
-  const compiler = new FluxCompiler({
-    target: 'js',
-    minify: false,
-    sourceMaps: true,
-    optimizations: false
-  });
+  console.log(chalk.blue('🚀 Starting Flux Development Server...'));
+  
+  try {
+    // Initialize configuration system
+    console.log(chalk.blue('📋 Loading configuration...'));
+    await configManager.loadConfiguration();
+    
+    // Initialize storage system
+    console.log(chalk.blue('💾 Initializing storage system...'));
+    await storageManager.initializeStorage();
+    
+    // Get configuration values
+    const configPort = configManager.get('server.port', port);
+    const configHost = configManager.get('server.host', host);
+    const finalPort = port || configPort;
+    const finalHost = host || configHost;
+    
+    const compiler = new FluxCompiler({
+      target: 'js',
+      minify: false,
+      sourceMaps: true,
+      optimizations: false,
+      watchMode: true
+    });
   
   // File watcher for hot reloading
   const watchedFiles = new Set();
@@ -47,7 +70,7 @@ export async function devServer(options = {}) {
   
   const server = createServer(async (req, res) => {
     try {
-      const url = new URL(req.url, `http://${host}:${port}`);
+      const url = new URL(req.url, `http://${finalHost}:${finalPort}`);
       let filePath = url.pathname;
       
       // Handle root path
@@ -84,6 +107,16 @@ export async function devServer(options = {}) {
           await serveFile(fullPath, res);
         }
       } catch (error) {
+        // Try to serve from storage if file not found
+        if (filePath.startsWith('storage/')) {
+          try {
+            await serveStorageFile(filePath, res);
+            return;
+          } catch (storageError) {
+            console.log(`Storage file not found: ${filePath}`);
+          }
+        }
+        
         // File not found, try to compile Flux files
         if (filePath.endsWith('.js') && !filePath.includes('node_modules')) {
           const fluxPath = filePath.replace(/\.js$/, '.flux');
@@ -140,10 +173,11 @@ export async function devServer(options = {}) {
     }
   });
   
-  server.listen(port, host, () => {
-    console.log(chalk.green(`🚀 Flux dev server running at http://${host}:${port}`));
+  server.listen(finalPort, finalHost, () => {
+    console.log(chalk.green(`🚀 Flux dev server running at http://${finalHost}:${finalPort}`));
     console.log(chalk.cyan(`📁 Serving from: ${root}`));
-    console.log(chalk.yellow(`⚡ Hot reload enabled`));
+    console.log(chalk.blue(`💾 Storage: ${configManager.get('storage.type', 'local')}`));
+    console.log(chalk.yellow(`⚡ Hot reload: ${hot ? 'enabled' : 'disabled'}`));
     console.log(chalk.gray(`Press Ctrl+C to stop`));
   });
   
@@ -151,6 +185,11 @@ export async function devServer(options = {}) {
   await setupFileWatching(root, compiler, connections);
   
   return server;
+  
+  } catch (error) {
+    console.error(chalk.red('❌ Failed to start development server:'), error);
+    throw error;
+  }
 }
 
 async function serveFile(filePath, res) {
@@ -207,6 +246,32 @@ async function serveDirectoryListing(dirPath, res, urlPath) {
   } catch (error) {
     res.writeHead(500);
     res.end('Error reading directory');
+  }
+}
+
+async function serveStorageFile(filePath, res) {
+  try {
+    // Remove 'storage/' prefix to get the relative path
+    const relativePath = filePath.replace(/^storage\//, '');
+    
+    // Get file info from storage manager
+    const fileInfo = await storageManager.servePublicFile(relativePath);
+    
+    // Set appropriate headers
+    res.writeHead(200, {
+      'Content-Type': fileInfo.mimeType,
+      'Content-Length': fileInfo.stats.size,
+      'Cache-Control': 'public, max-age=3600' // Cache for 1 hour
+    });
+    
+    // Pipe the file stream to response
+    fileInfo.stream.pipe(res);
+    
+    console.log(chalk.blue(`📁 Served storage file: ${filePath}`));
+  } catch (error) {
+    console.error(chalk.red(`❌ Storage file error: ${error.message}`));
+    res.writeHead(404, { 'Content-Type': 'text/plain' });
+    res.end('File not found');
   }
 }
 
