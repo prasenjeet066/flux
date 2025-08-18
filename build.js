@@ -24,7 +24,8 @@ async function main() {
         'src/compiler/codegen.js',
         'src/errors.js',
         'src/cli/create-project.js',
-        'src/cli/dev-server.js'
+        'src/cli/dev-server.js',
+        'src/cli/advanced-cli.js'
       ],
       bundle: true,
       format: 'esm',
@@ -72,13 +73,11 @@ export { devServer } from './cli/dev-server.js';
     
     await fs.writeFile('dist/index.js', mainIndex);
     
-    // Create CLI entry point
+    // Create CLI entry point that executes the advanced CLI
     const cliIndex = `#!/usr/bin/env node
-import { FluxCompiler } from './compiler/index.js';
-import { createProject } from './cli/create-project.js';
-import { devServer } from './cli/dev-server.js';
-
-export { FluxCompiler, createProject, devServer };
+import { AdvancedCLI } from './src/cli/advanced-cli.js';
+const cli = new AdvancedCLI();
+cli.run();
 `;
     
     await fs.writeFile('dist/cli.js', cliIndex);

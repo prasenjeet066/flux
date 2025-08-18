@@ -1,6 +1,4 @@
 #!/usr/bin/env node
-import { FluxCompiler } from './compiler/index.js';
-import { createProject } from './cli/create-project.js';
-import { devServer } from './cli/dev-server.js';
-
-export { FluxCompiler, createProject, devServer };
+import { AdvancedCLI } from './src/cli/advanced-cli.js';
+const cli = new AdvancedCLI();
+cli.run();
