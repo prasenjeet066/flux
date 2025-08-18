@@ -10,6 +10,7 @@ import { createServer } from "http";
 import { createReadStream } from "fs";
 import { stat, readFile, readdir, access } from "fs/promises";
 import { extname, join, resolve } from "path";
+import { pathToFileURL } from "url";
 import fs4 from "fs-extra";
 
 // src/compiler/lexer.js
@@ -3448,6 +3449,7 @@ async function devServer(options = {}) {
     const watchedFiles = /* @__PURE__ */ new Set();
     const fileWatchers = /* @__PURE__ */ new Map();
     const connections = /* @__PURE__ */ new Set();
+    const userMiddlewares = await loadUserMiddlewares(root);
     const server = createServer(async (req, res) => {
       try {
         const url = new URL(req.url, `http://${finalHost}:${finalPort}`);
@@ -3460,6 +3462,16 @@ async function devServer(options = {}) {
           res.writeHead(403);
           res.end("Forbidden");
           return;
+        }
+        for (const mw of userMiddlewares) {
+          try {
+            const result = await mw({ req, res, url, root, filePath });
+            if (res.writableEnded || result === false) {
+              return;
+            }
+          } catch (mwErr) {
+            console.warn("Middleware error:", mwErr?.message || mwErr);
+          }
         }
         const fullPath = resolve(root, filePath);
         try {
@@ -3499,13 +3511,12 @@ async function devServer(options = {}) {
             await access(publicPath);
             await serveFile(publicPath, res);
           } catch {
-            await serve404(res, filePath);
+            await serve404(res, filePath, root);
           }
         }
       } catch (error) {
         console.error("Server error:", error);
-        res.writeHead(500);
-        res.end("Internal Server Error");
+        await serve500(res, error, root);
       }
     });
     server.on("upgrade", (request, socket, head) => {
@@ -3628,9 +3639,22 @@ async function compileAndServeFlux(fluxPath, res, compiler) {
     res.end(`Compilation error: ${error.message}`);
   }
 }
-async function serve404(res, filePath) {
+async function serve404(res, filePath, root) {
   res.setHeader("Content-Type", "text/html");
   res.writeHead(404);
+  try {
+    const custom404a = resolve(root, "public", "404.html");
+    const custom404b = resolve(root, "public", "404.htm");
+    if (await fs4.pathExists(custom404a)) {
+      res.end(await fs4.readFile(custom404a, "utf-8"));
+      return;
+    }
+    if (await fs4.pathExists(custom404b)) {
+      res.end(await fs4.readFile(custom404b, "utf-8"));
+      return;
+    }
+  } catch {
+  }
   const html = `
 <!DOCTYPE html>
 <html>
@@ -3648,6 +3672,41 @@ async function serve404(res, filePath) {
 </body>
 </html>`;
   res.end(html);
+}
+async function serve500(res, error, root) {
+  try {
+    res.setHeader("Content-Type", "text/html");
+    res.writeHead(500);
+    const custom500a = resolve(root, "public", "500.html");
+    const custom500b = resolve(root, "public", "500.htm");
+    if (await fs4.pathExists(custom500a)) {
+      res.end(await fs4.readFile(custom500a, "utf-8"));
+      return;
+    }
+    if (await fs4.pathExists(custom500b)) {
+      res.end(await fs4.readFile(custom500b, "utf-8"));
+      return;
+    }
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>500 - Internal Server Error</title>
+  <style>
+    body { font-family: monospace; margin: 40px; }
+    .error { color: #e74c3c; font-size: 14px; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>500 - Internal Server Error</h1>
+  <div class="error">${error && (error.stack || error.message) || "Unknown error"}</div>
+</body>
+</html>`;
+    res.end(html);
+  } catch {
+    res.writeHead(500);
+    res.end("Internal Server Error");
+  }
 }
 async function setupFileWatching(root, compiler, connections) {
   const watchInterval = setInterval(async () => {
@@ -3743,6 +3802,19 @@ var WebSocket2 = class {
     }
   }
 };
+async function loadUserMiddlewares(root) {
+  try {
+    const candidate = resolve(root, "src", "middleware", "index.js");
+    if (await fs4.pathExists(candidate)) {
+      const mod = await import(pathToFileURL(candidate).href);
+      const list = mod.default || mod.middlewares;
+      if (Array.isArray(list)) return list;
+    }
+  } catch (e) {
+    console.warn("Warning: failed to load user middleware:", e?.message || e);
+  }
+  return [];
+}
 export {
   devServer
 };
