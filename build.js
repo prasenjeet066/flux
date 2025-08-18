@@ -6,7 +6,7 @@ import { join } from 'path';
 import chalk from 'chalk';
 
 async function main() {
-  console.log(chalk.blue('🔨 Building Flux Language...'));
+  console.log(chalk.blue('[build] Building Flux Language...'));
   
   try {
     // Clean dist directory
@@ -40,13 +40,13 @@ async function main() {
     });
     
     if (result.errors.length > 0) {
-      console.error(chalk.red('Build errors:'));
+      console.error(chalk.red('[build] Errors:'));
       result.errors.forEach(error => console.error(error));
       process.exit(1);
     }
     
     if (result.warnings.length > 0) {
-      console.warn(chalk.yellow('Build warnings:'));
+      console.warn(chalk.yellow('[build] Warnings:'));
       result.warnings.forEach(warning => console.warn(warning));
     }
     
@@ -116,27 +116,27 @@ export { FluxCompiler, createProject, devServer };
     // Ensure CLI entry is executable in the tarball
     await fs.chmod('dist/cli.js', 0o755);
     
-    console.log(chalk.green('✅ Build completed successfully!'));
-    console.log(chalk.cyan('📦 Output directory: dist/'));
+    console.log(chalk.green('[build] Completed successfully'));
+    console.log(chalk.cyan('[out] dist/'));
     
     // Show build summary
     const buildInfo = {
-      'Compiler': '✅',
-      'Runtime': '✅',
-      'AST Nodes': '✅',
-      'Error Handling': '✅',
-      'CLI Tools': '✅',
-      'Project Templates': '✅',
-      'Dev Server': '✅'
+      'Compiler': '[ok]',
+      'Runtime': '[ok]',
+      'AST Nodes': '[ok]',
+      'Error Handling': '[ok]',
+      'CLI Tools': '[ok]',
+      'Project Templates': '[ok]',
+      'Dev Server': '[ok]'
     };
     
-    console.log(chalk.blue('\n📋 Build Summary:'));
+    console.log(chalk.blue('\n[build] Summary:'));
     Object.entries(buildInfo).forEach(([component, status]) => {
       console.log(`  ${status} ${component}`);
     });
     
   } catch (error) {
-    console.error(chalk.red('❌ Build failed:'), error);
+    console.error(chalk.red('[build] Failed:'), error);
     process.exit(1);
   }
 }
