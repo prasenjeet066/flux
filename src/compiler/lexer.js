@@ -5,9 +5,11 @@ export class FluxLexer {
   constructor(source) {
     this.source = source;
     this.position = 0;
+    this.start = 0;
     this.line = 1;
     this.column = 1;
     this.tokens = [];
+    this.errors = [];
   }
 
   // Token types
@@ -136,6 +138,7 @@ export class FluxLexer {
   }
 
   scanToken() {
+    this.start = this.position;
     const c = this.advance();
     
     switch (c) {
@@ -225,7 +228,7 @@ export class FluxLexer {
         } else if (this.match('=')) {
           this.addToken(FluxLexer.TOKEN_TYPES.LESS_EQUAL);
         } else {
-          this.addToken(FluxLexer.TOKEN_TYPES.LESS_THAN);
+          this.addToken(FluxLexer.TOKEN_TYPES.JSX_OPEN);
         }
         break;
       case '>':
@@ -377,11 +380,12 @@ export class FluxLexer {
   }
 
   addToken(type, literal = null) {
-    if (type !== FluxLexer.TOKEN_TYPES.NEWLINE) {
-      this.start = this.position - (literal?.toString().length || 1);
+    let text;
+    if (type === FluxLexer.TOKEN_TYPES.EOF) {
+      text = '';
+    } else {
+      text = this.source.substring(this.start, this.position);
     }
-    
-    const text = this.source.substring(this.start, this.position);
     this.tokens.push({
       type,
       lexeme: text,

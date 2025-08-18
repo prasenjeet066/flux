@@ -8,6 +8,7 @@ export class FluxParser {
   constructor(tokens) {
     this.tokens = tokens;
     this.current = 0;
+    this.errors = [];
   }
 
   static parse(source) {
@@ -530,7 +531,29 @@ export class FluxParser {
 
   // Expressions
   expression() {
-    return this.ternary();
+    return this.assignment();
+  }
+
+  assignment() {
+    const expr = this.ternary();
+    
+    if (this.match('ASSIGN', 'PLUS_ASSIGN', 'MINUS_ASSIGN')) {
+      const operator = this.previous();
+      const value = this.assignment();
+      
+      if (expr.type !== 'Identifier') {
+        throw new Error('Invalid assignment target');
+      }
+      
+      return new AST.AssignmentExpression(
+        expr,
+        operator.lexeme,
+        value,
+        this.getCurrentLocation()
+      );
+    }
+    
+    return expr;
   }
 
   ternary() {
@@ -781,7 +804,7 @@ export class FluxParser {
     }
     
     // JSX Element
-    if (this.check('LESS_THAN')) {
+    if (this.check('JSX_OPEN')) {
       return this.jsxElement();
     }
     
@@ -789,7 +812,7 @@ export class FluxParser {
   }
 
   jsxElement() {
-    this.consume('LESS_THAN', 'Expected "<"');
+    this.consume('JSX_OPEN', 'Expected "<"');
     
     // Element name
     const name = this.consume('IDENTIFIER', 'Expected element name');
@@ -816,7 +839,7 @@ export class FluxParser {
     // Children
     const children = [];
     while (!this.check('JSX_CLOSE') && !this.isAtEnd()) {
-      if (this.check('LESS_THAN') && this.peekNext().type === 'IDENTIFIER') {
+      if (this.check('JSX_OPEN') && this.peekNext().type === 'IDENTIFIER') {
         // Nested element
         children.push(this.jsxElement());
       } else if (this.check('LEFT_BRACE')) {
@@ -828,7 +851,7 @@ export class FluxParser {
       } else {
         // Text content
         let text = '';
-        while (!this.check('LESS_THAN') && !this.check('LEFT_BRACE') && !this.isAtEnd()) {
+        while (!this.check('JSX_OPEN') && !this.check('JSX_CLOSE') && !this.check('LEFT_BRACE') && !this.isAtEnd()) {
           text += this.advance().lexeme;
         }
         if (text.trim()) {
@@ -855,7 +878,15 @@ export class FluxParser {
   }
 
   jsxAttribute() {
-    const name = this.consume('IDENTIFIER', 'Expected attribute name');
+    let name;
+    if (this.check('AT')) {
+      this.advance(); // consume '@'
+      const eventName = this.consume('IDENTIFIER', 'Expected event name after @');
+      name = new AST.Identifier('@' + eventName.lexeme);
+    } else {
+      const attrName = this.consume('IDENTIFIER', 'Expected attribute name');
+      name = new AST.Identifier(attrName.lexeme);
+    }
     
     if (this.match('ASSIGN')) {
       let value;
