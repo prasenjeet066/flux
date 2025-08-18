@@ -87,10 +87,34 @@ export { FluxCompiler, createProject, devServer };
     const packageJson = JSON.parse(await fs.readFile('package.json', 'utf8'));
     packageJson.main = './index.js';
     packageJson.bin = {
-      'flux': './bin/flux.js'
+      'flux': './cli.js'
     };
     
+    // Remove dev-only fields and scripts from the distributed package.json
+    delete packageJson.scripts;
+    delete packageJson.devDependencies;
+    // Remove any publishConfig that points to non-npm registries
+    delete packageJson.publishConfig;
+    
+    // Keep only runtime dependencies
+    packageJson.dependencies = packageJson.dependencies || {};
+    
+    // Limit published files
+    packageJson.files = [
+      '*.js',
+      '*.js.map',
+      'runtime',
+      'compiler',
+      'ast',
+      'cli',
+      'errors.js',
+      'README.md'
+    ];
+    
     await fs.writeFile('dist/package.json', JSON.stringify(packageJson, null, 2));
+
+    // Ensure CLI entry is executable in the tarball
+    await fs.chmod('dist/cli.js', 0o755);
     
     console.log(chalk.green('✅ Build completed successfully!'));
     console.log(chalk.cyan('📦 Output directory: dist/'));
