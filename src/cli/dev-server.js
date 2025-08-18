@@ -42,7 +42,7 @@ export async function devServer(options = {}) {
   
   try {
     // Initialize configuration system only if config file exists
-    const configPath = path.resolve(root, 'flux.config.js');
+    const configPath = resolve(root, 'flux.config.js');
     if (await fs.pathExists(configPath)) {
       console.log(chalk.blue('📋 Loading configuration...'));
       await configManager.loadConfiguration();
