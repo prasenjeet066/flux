@@ -3515,6 +3515,15 @@ async function devServer(options = {}) {
             await access(publicPath);
             await serveFile(publicPath, res);
           } catch {
+            if (!extname(filePath)) {
+              const indexHtml = resolve(root, "public", "index.html");
+              try {
+                await access(indexHtml);
+                await serveFile(indexHtml, res);
+                return;
+              } catch {
+              }
+            }
             await serve404(res, filePath, root);
           }
         }
