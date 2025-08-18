@@ -16,7 +16,9 @@ var TEMPLATES = {
   output: 'dist',
   target: 'js',
   minify: false,
-  sourceMaps: true
+  sourceMaps: true,
+  appDir: '.flux',
+  publicDir: 'public'
 };`,
       "src/app.flux": `component App {
   render {
@@ -237,7 +239,7 @@ styles Counter {
     return user ? \`Hello, \${user.name}!\` : "Welcome, guest!"
   }
 }`,
-      "public/index.html": `<!DOCTYPE html>
+      ".flux/index.html": `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -253,7 +255,7 @@ styles Counter {
 </head>
 <body>
     <div id="root"></div>
-    <script type="module" src="../src/app.js"></script>
+    <script type="module" src="../src/app.flux"></script>
 </body>
 </html>`,
       "README.md": `# {{projectName}}
@@ -277,7 +279,8 @@ flux build
   - \`pages/\` - Route components
   - \`components/\` - Reusable components
   - \`stores/\` - State management
-- \`public/\` - Static assets
+- \`.flux/\` - HTML shell and app entry
+- \`public/\` - Static assets (images, fonts, etc.)
 - \`dist/\` - Build output
 
 ## Learn More
@@ -294,7 +297,9 @@ flux build
       "flux.config.js": `export default {
   name: '{{projectName}}',
   entry: 'src/app.flux',
-  output: 'dist'
+  output: 'dist',
+  appDir: '.flux',
+  publicDir: 'public'
 };`,
       "src/app.flux": `component App {
   state message = "Hello, Flux!"
@@ -312,14 +317,14 @@ flux build
 }
 
 mount(App, '#root')`,
-      "public/index.html": `<!DOCTYPE html>
+      ".flux/index.html": `<!DOCTYPE html>
 <html>
 <head>
     <title>{{projectName}}</title>
 </head>
 <body>
     <div id="root"></div>
-    <script type="module" src="../src/app.js"></script>
+    <script type="module" src="../src/app.flux"></script>
 </body>
 </html>`
     }
@@ -373,7 +378,7 @@ dist/
   await fs.writeFile(path.join(projectDir, ".gitignore"), gitignore);
   console.log("Created: .gitignore");
   console.log(`
-\u2705 Project created successfully in ${projectDir}`);
+[ok] Project created successfully in ${projectDir}`);
   console.log(`
 Next steps:`);
   console.log(`  cd ${projectName}`);

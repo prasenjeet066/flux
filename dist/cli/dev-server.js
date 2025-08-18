@@ -3420,11 +3420,11 @@ async function devServer(options = {}) {
     analyze = false,
     profile = false
   } = options;
-  console.log(chalk.blue("\u{1F680} Starting Flux Development Server..."));
+  console.log(chalk.blue("[start] Starting Flux Development Server..."));
   try {
-    console.log(chalk.blue("\u{1F4CB} Loading configuration..."));
+    console.log(chalk.blue("[config] Loading configuration..."));
     await configManager.loadConfiguration();
-    console.log(chalk.blue("\u{1F4BE} Initializing storage system..."));
+    console.log(chalk.blue("[storage] Initializing storage system..."));
     await storageManager.initializeStorage();
     const configPort = configManager.get("server.port", port);
     const configHost = configManager.get("server.host", host);
@@ -3445,6 +3445,13 @@ async function devServer(options = {}) {
         const url = new URL(req.url, `http://${finalHost}:${finalPort}`);
         let filePath = url.pathname;
         if (filePath === "/") {
+          const fluxIndex = resolve(root, ".flux", "index.html");
+          try {
+            await access(fluxIndex);
+            await serveFile(fluxIndex, res);
+            return;
+          } catch {
+          }
           filePath = "/index.html";
         }
         filePath = filePath.substring(1);
@@ -3462,6 +3469,15 @@ async function devServer(options = {}) {
               await access(indexPath);
               await serveFile(indexPath, res);
             } catch {
+              if (fullPath === resolve(root)) {
+                const fluxIndex = resolve(root, ".flux", "index.html");
+                try {
+                  await access(fluxIndex);
+                  await serveFile(fluxIndex, res);
+                  return;
+                } catch {
+                }
+              }
               await serveDirectoryListing(fullPath, res, filePath);
             }
           } else {
@@ -3482,6 +3498,15 @@ async function devServer(options = {}) {
             try {
               await access(fullFluxPath);
               await compileAndServeFlux(fullFluxPath, res, compiler);
+              return;
+            } catch {
+            }
+          }
+          if (filePath.endsWith(".html") || filePath.startsWith(".flux/")) {
+            const fluxPath = resolve(root, ".flux", filePath.replace(/^\.flux\//, ""));
+            try {
+              await access(fluxPath);
+              await serveFile(fluxPath, res);
               return;
             } catch {
             }
@@ -3521,10 +3546,10 @@ async function devServer(options = {}) {
       }
     });
     server.listen(finalPort, finalHost, () => {
-      console.log(chalk.green(`\u{1F680} Flux dev server running at http://${finalHost}:${finalPort}`));
-      console.log(chalk.cyan(`\u{1F4C1} Serving from: ${root}`));
-      console.log(chalk.blue(`\u{1F4BE} Storage: ${configManager.get("storage.type", "local")}`));
-      console.log(chalk.yellow(`\u26A1 Hot reload: ${hot ? "enabled" : "disabled"}`));
+      console.log(chalk.green(`[ready] Flux dev server at http://${finalHost}:${finalPort}`));
+      console.log(chalk.cyan(`[root] ${root}`));
+      console.log(chalk.blue(`[storage] ${configManager.get("storage.type", "local")}`));
+      console.log(chalk.yellow(`[hmr] ${hot ? "enabled" : "disabled"}`));
       console.log(chalk.gray(`Press Ctrl+C to stop`));
     });
     await setupFileWatching(root, compiler, connections);
@@ -3594,7 +3619,7 @@ async function serveStorageFile(filePath, res) {
       // Cache for 1 hour
     });
     fileInfo.stream.pipe(res);
-    console.log(chalk.blue(`\u{1F4C1} Served storage file: ${filePath}`));
+    console.log(chalk.blue(`[storage] Served file: ${filePath}`));
   } catch (error) {
     console.error(chalk.red(`\u274C Storage file error: ${error.message}`));
     res.writeHead(404, { "Content-Type": "text/plain" });
@@ -3644,7 +3669,7 @@ async function serve404(res, filePath) {
 async function setupFileWatching(root, compiler, connections) {
   const watchInterval = setInterval(async () => {
     try {
-      const dirs = ["src", "public", "pages", "components", "stores"];
+      const dirs = ["src", "public", "pages", "components", "stores", ".flux"];
       for (const dir of dirs) {
         const dirPath = join(root, dir);
         try {

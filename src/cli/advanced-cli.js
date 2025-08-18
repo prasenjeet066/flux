@@ -113,10 +113,18 @@ class AdvancedCLI {
       .option('--update', 'Update dependencies')
       .option('--audit', 'Security audit')
       .action(this.maintenanceTasks.bind(this));
+
+    // Code generation
+    this.program
+      .command('generate <type> <name>')
+      .alias('g')
+      .description('Generate boilerplate: component|page|store')
+      .option('-d, --dir <dir>', 'Directory to place the generated file')
+      .action(this.generateArtifact.bind(this));
   }
 
   async createProject(projectName, options) {
-    console.log(chalk.blue(`🚀 Creating new Flux project: ${projectName}`));
+    console.log(chalk.blue(`[new] Creating Flux project: ${projectName}`));
     
     try {
       const projectDir = path.resolve(projectName);
@@ -134,9 +142,9 @@ class AdvancedCLI {
       // Install dependencies
       await this.installDependencies(projectDir, options);
       
-      console.log(chalk.green(`✅ Project ${projectName} created successfully!`));
-      console.log(chalk.cyan(`📁 Project directory: ${projectDir}`));
-      console.log(chalk.yellow(`🚀 Next steps:`));
+      console.log(chalk.green(`[ok] Project ${projectName} created`));
+      console.log(chalk.cyan(`[dir] ${projectDir}`));
+      console.log(chalk.yellow(`[next]`));
       console.log(chalk.yellow(`   cd ${projectName}`));
       console.log(chalk.yellow(`   npm run dev`));
       
@@ -169,7 +177,7 @@ class AdvancedCLI {
       'src/pages/home.flux': this.generateHomePage(),
       'src/styles/global.css': this.generateGlobalCSS(),
       '.gitignore': this.generateGitignore(),
-      'index.html': this.generateIndexHTML()
+      '.flux/index.html': this.generateIndexHTML()
     };
 
     for (const [filename, content] of Object.entries(files)) {
@@ -244,7 +252,7 @@ class AdvancedCLI {
   }
 
   async installDependencies(projectDir, options) {
-    console.log(chalk.blue('📦 Installing dependencies...'));
+    console.log(chalk.blue('[deps] Installing dependencies...'));
     
     const packageManager = this.detectPackageManager();
     const installCmd = packageManager === 'npm' ? 'npm install' : 'yarn install';
@@ -256,8 +264,8 @@ class AdvancedCLI {
       const { execSync } = await import('child_process');
       execSync(installCmd, { stdio: 'inherit' });
     } catch (error) {
-      console.warn(chalk.yellow('Warning: Could not install dependencies automatically'));
-      console.warn(chalk.yellow(`Please run '${installCmd}' manually`));
+      console.warn(chalk.yellow('[warn] Could not install dependencies automatically'));
+      console.warn(chalk.yellow(`[hint] Run '${installCmd}' manually`));
     }
   }
 
@@ -268,7 +276,7 @@ class AdvancedCLI {
   }
 
   async startDevServer(options) {
-    console.log(chalk.blue('🚀 Starting development server...'));
+    console.log(chalk.blue('[dev] Starting development server...'));
     
     try {
       // Start the dev server with advanced features
@@ -287,7 +295,7 @@ class AdvancedCLI {
   }
 
   async buildProject(options) {
-    console.log(chalk.blue('🔨 Building project...'));
+    console.log(chalk.blue('[build] Building project...'));
     
     try {
       const compiler = new FluxCompiler({
@@ -303,7 +311,7 @@ class AdvancedCLI {
         await this.analyzeBundle(results);
       }
       
-      console.log(chalk.green('✅ Build completed successfully!'));
+      console.log(chalk.green('[ok] Build completed'));
       
     } catch (error) {
       console.error(chalk.red('Build failed:'), error);
@@ -312,7 +320,7 @@ class AdvancedCLI {
   }
 
   async runTests(options) {
-    console.log(chalk.blue('🧪 Running tests...'));
+    console.log(chalk.blue('[test] Running tests...'));
     
     try {
       // Run test suite with advanced features
@@ -325,7 +333,7 @@ class AdvancedCLI {
   }
 
   async debugApplication(options) {
-    console.log(chalk.blue('🐛 Starting debug session...'));
+    console.log(chalk.blue('[debug] Starting debug session...'));
     
     try {
       // Start debugging session
@@ -334,8 +342,8 @@ class AdvancedCLI {
       }
       
       // Start the application in debug mode
-      console.log(chalk.green('Debug session started'));
-      console.log(chalk.yellow('Use your debugger to connect'));
+      console.log(chalk.green('[ok] Debug session started'));
+      console.log(chalk.yellow('[hint] Use your debugger to connect'));
       
     } catch (error) {
       console.error(chalk.red('Debug session failed:'), error);
@@ -344,7 +352,7 @@ class AdvancedCLI {
   }
 
   async profileApplication(options) {
-    console.log(chalk.blue('📊 Starting performance profiling...'));
+    console.log(chalk.blue('[profile] Starting performance profiling...'));
     
     try {
       // Start profiling based on options
@@ -360,7 +368,7 @@ class AdvancedCLI {
         await this.startNetworkProfiling(options.output);
       }
       
-      console.log(chalk.green('Profiling started'));
+      console.log(chalk.green('[ok] Profiling started'));
       
     } catch (error) {
       console.error(chalk.red('Profiling failed:'), error);
@@ -369,7 +377,7 @@ class AdvancedCLI {
   }
 
   async manageDatabase(options) {
-    console.log(chalk.blue('🗄️ Managing database...'));
+    console.log(chalk.blue('[db] Managing database...'));
     
     try {
       if (options.migrate) {
@@ -384,7 +392,7 @@ class AdvancedCLI {
         await this.resetDatabase();
       }
       
-      console.log(chalk.green('Database operations completed'));
+      console.log(chalk.green('[ok] Database operations completed'));
       
     } catch (error) {
       console.error(chalk.red('Database operations failed:'), error);
@@ -393,7 +401,7 @@ class AdvancedCLI {
   }
 
   async deployApplication(options) {
-    console.log(chalk.blue('🚀 Deploying application...'));
+    console.log(chalk.blue('[deploy] Deploying application...'));
     
     try {
       // Build the project first
@@ -407,10 +415,10 @@ class AdvancedCLI {
       } else if (options.platform === 'aws') {
         await this.deployToAWS(options);
       } else {
-        console.log(chalk.yellow('No deployment platform specified'));
+        console.log(chalk.yellow('[warn] No deployment platform specified'));
       }
       
-      console.log(chalk.green('Deployment completed'));
+      console.log(chalk.green('[ok] Deployment completed'));
       
     } catch (error) {
       console.error(chalk.red('Deployment failed:'), error);
@@ -419,7 +427,7 @@ class AdvancedCLI {
   }
 
   async maintenanceTasks(options) {
-    console.log(chalk.blue('🔧 Running maintenance tasks...'));
+    console.log(chalk.blue('[maint] Running maintenance tasks...'));
     
     try {
       if (options.clean) {
@@ -434,7 +442,7 @@ class AdvancedCLI {
         await this.securityAudit();
       }
       
-      console.log(chalk.green('Maintenance tasks completed'));
+      console.log(chalk.green('[ok] Maintenance tasks completed'));
       
     } catch (error) {
       console.error(chalk.red('Maintenance tasks failed:'), error);
@@ -471,7 +479,9 @@ class AdvancedCLI {
   sourceMaps: true,
   optimizations: true,
   treeShaking: true,
-  codeSplitting: false
+  codeSplitting: false,
+  appDir: '.flux',
+  publicDir: 'public'
 };`;
   }
 
@@ -583,11 +593,7 @@ body {
   }
 
   generateGitignore() {
-    return `node_modules/
-dist/
-.env
-*.log
-.DS_Store`;
+    return `node_modules/\ndist/\n.env\n*.log\n.DS_Store`;
   }
 
   generateIndexHTML() {
@@ -600,7 +606,7 @@ dist/
 </head>
 <body>
     <div id="root"></div>
-    <script type="module" src="./src/app.flux"></script>
+    <script type="module" src="../src/app.flux"></script>
 </body>
 </html>`;
   }
@@ -632,67 +638,108 @@ dist/
   // Profiling methods
   async startCPUProfiling(output) {
     // CPU profiling implementation
-    console.log('CPU profiling started');
+    console.log('[profile] CPU profiling started');
   }
 
   async startMemoryProfiling(output) {
     // Memory profiling implementation
-    console.log('Memory profiling started');
+    console.log('[profile] Memory profiling started');
   }
 
   async startNetworkProfiling(output) {
-    // Network profiling implementation
-    console.log('Network profiling started');
+    // Memory profiling implementation
+    console.log('[profile] Network profiling started');
   }
 
   // Database methods
   async runMigrations() {
-    console.log('Running migrations...');
+    console.log('[db] Running migrations...');
   }
 
   async seedDatabase() {
-    console.log('Seeding database...');
+    console.log('[db] Seeding database...');
   }
 
   async resetDatabase() {
-    console.log('Resetting database...');
+    console.log('[db] Resetting database...');
   }
 
   // Deployment methods
   async deployToVercel(options) {
-    console.log('Deploying to Vercel...');
+    console.log('[deploy] Vercel...');
   }
 
   async deployToNetlify(options) {
-    console.log('Deploying to Netlify...');
+    console.log('[deploy] Netlify...');
   }
 
   async deployToAWS(options) {
-    console.log('Deploying to AWS...');
+    console.log('[deploy] AWS...');
   }
 
   // Maintenance methods
   async cleanBuildArtifacts() {
-    console.log('Cleaning build artifacts...');
+    console.log('[maint] Cleaning build artifacts...');
   }
 
   async updateDependencies() {
-    console.log('Updating dependencies...');
+    console.log('[maint] Updating dependencies...');
   }
 
   async securityAudit() {
-    console.log('Running security audit...');
+    console.log('[maint] Running security audit...');
   }
 
   // Bundle analysis
   async analyzeBundle(results) {
-    console.log('Analyzing bundle...');
+    console.log('[analyze] Bundle...');
     // Implementation would analyze the build results
+  }
+
+  async generateArtifact(type, name, options) {
+    const cwd = process.cwd();
+    const targetDir = options.dir ? path.resolve(options.dir) : path.resolve(cwd, 'src',
+      type === 'page' ? 'pages' : type === 'store' ? 'stores' : 'components');
+    await fs.ensureDir(targetDir);
+    const fileName = type === 'store' ? `${name}.flux` : `${capitalize(name)}.flux`;
+    const filePath = path.join(targetDir, fileName);
+    if (await fs.pathExists(filePath)) {
+      console.log(chalk.yellow('[skip] File exists:'), filePath);
+      return;
+    }
+    const content = this.scaffold(type, name);
+    await fs.writeFile(filePath, content);
+    console.log(chalk.green('[ok] Generated:'), filePath);
+  }
+
+  scaffold(type, name) {
+    const compName = capitalize(name);
+    if (type === 'component') {
+      return `component ${compName} {\n  render {\n    <div class=\"${kebab(compName)}\">${compName}</div>\n  }\n}`;
+    }
+    if (type === 'page') {
+      return `@route(\"/${kebab(compName)}\")\ncomponent ${compName}Page {\n  render {\n    <div class=\"page ${kebab(compName)}\">${compName} Page</div>\n  }\n}`;
+    }
+    if (type === 'store') {
+      return `store ${compName}Store {\n  state value = null\n}`;
+    }
+    return `// Unknown type`;
   }
 
   run() {
     this.program.parse();
   }
+}
+
+function capitalize(s) {
+  return s && s.length ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+}
+
+function kebab(s) {
+  return s
+    .replace(/([a-z])([A-Z])/g, '$1-$2')
+    .replace(/\s+/g, '-')
+    .toLowerCase();
 }
 
 // Run the CLI if this file is executed directly

@@ -36,6 +36,7 @@ export default {
     pages: 'src/pages',
     components: 'src/components',
     stores: 'src/stores',
+    appDir: '.flux',
     public: 'public',
     dist: 'dist'
   },
