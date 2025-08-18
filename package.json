@@ -39,11 +39,12 @@
   "dependencies": {
     "chalk": "^5.3.0",
     "commander": "^11.1.0",
-    "glob": "^10.3.10",
+    "events": "^3.3.0",
     "fs-extra": "^11.2.0",
-    "events": "^3.3.0"
+    "glob": "^10.3.10"
   },
   "devDependencies": {
+    "esbuild": "^0.25.9",
     "eslint": "^8.57.0",
     "prettier": "^3.2.5"
   },
@@ -55,7 +56,7 @@
     "url": "https://github.com/flux-lang/flux.git"
   },
   "publishConfig": {
-  "@prasenjeet066:registry": "https://npm.pkg.github.com"
+    "@prasenjeet066:registry": "https://npm.pkg.github.com"
   },
   "bugs": {
     "url": "https://github.com/flux-lang/flux/issues"
