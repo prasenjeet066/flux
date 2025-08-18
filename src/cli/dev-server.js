@@ -38,28 +38,28 @@ export async function devServer(options = {}) {
     profile = false
   } = options;
   
-  console.log(chalk.blue('🚀 Starting Flux Development Server...'));
+  console.log(chalk.blue('Starting Flux Development Server...'));
   
   try {
     // Initialize application configuration only if app config exists
     const appConfigPath = resolve(root, 'src', 'config', 'config.js');
     if (await fs.pathExists(appConfigPath)) {
-      console.log(chalk.blue('📋 Loading application configuration...'));
+      console.log(chalk.blue('Loading application configuration...'));
       try {
         await configManager.loadConfiguration();
       } catch (e) {
-        console.warn(chalk.yellow(`⚠️  Config load failed (${e?.message || e}). Continuing with defaults.`));
+        console.warn(chalk.yellow(`Config load failed (${e?.message || e}). Continuing with defaults.`));
       }
     } else {
-      console.log(chalk.yellow('⚠️  No src/config/config.js found, using default configuration'));
+      console.log(chalk.yellow('No src/config/config.js found, using default configuration'));
     }
     
     // Initialize storage system only if needed
     try {
-      console.log(chalk.blue('💾 Initializing storage system...'));
+      console.log(chalk.blue('Initializing storage system...'));
       await storageManager.initializeStorage();
     } catch (error) {
-      console.log(chalk.yellow('⚠️  Storage system not available, continuing without storage'));
+      console.log(chalk.yellow('Storage system not available, continuing without storage'));
     }
     
     // Get configuration values (use defaults if no config loaded)
@@ -93,7 +93,7 @@ export async function devServer(options = {}) {
       
       // Handle root path
       if (filePath === '/') {
-        filePath = '/index.html';
+        filePath = '/.flux/index.html';
       }
       
       // Remove leading slash
@@ -167,12 +167,12 @@ export async function devServer(options = {}) {
           await access(publicPath);
           await serveFile(publicPath, res);
         } catch {
-          // SPA fallback: if the request looks like a route (no extension), serve index.html
+          // SPA fallback: if the request looks like a route (no extension), serve .flux/index.html
           if (!extname(filePath)) {
-            const indexHtml = resolve(root, 'public', 'index.html');
+            const fluxIndex = resolve(root, '.flux', 'index.html');
             try {
-              await access(indexHtml);
-              await serveFile(indexHtml, res);
+              await access(fluxIndex);
+              await serveFile(fluxIndex, res);
               return;
             } catch {}
           }
@@ -212,10 +212,10 @@ export async function devServer(options = {}) {
   });
   
   server.listen(finalPort, finalHost, () => {
-    console.log(chalk.green(`🚀 Flux dev server running at http://${finalHost}:${finalPort}`));
-    console.log(chalk.cyan(`📁 Serving from: ${root}`));
-    console.log(chalk.blue(`💾 Storage: ${configManager.loaded ? configManager.get('storage.type', 'local') : 'none'}`));
-    console.log(chalk.yellow(`⚡ Hot reload: ${hot ? 'enabled' : 'disabled'}`));
+    console.log(chalk.green(`Flux dev server running at http://${finalHost}:${finalPort}`));
+    console.log(chalk.cyan(`Serving from: ${root}`));
+    console.log(chalk.blue(`Storage: ${configManager.loaded ? configManager.get('storage.type', 'local') : 'none'}`));
+    console.log(chalk.yellow(`Hot reload: ${hot ? 'enabled' : 'disabled'}`));
     console.log(chalk.gray(`Press Ctrl+C to stop`));
   });
   
@@ -342,8 +342,8 @@ async function serve404(res, filePath, root) {
   
   // Custom 404 if provided
   try {
-    const custom404a = resolve(root, 'public', '404.html');
-    const custom404b = resolve(root, 'public', '404.htm');
+    const custom404a = resolve(root, '.flux', '404.html');
+    const custom404b = resolve(root, '.flux', '404.htm');
     if (await fs.pathExists(custom404a)) {
       res.end(await fs.readFile(custom404a, 'utf-8'));
       return;
@@ -378,8 +378,8 @@ async function serve500(res, error, root) {
   try {
     res.setHeader('Content-Type', 'text/html');
     res.writeHead(500);
-    const custom500a = resolve(root, 'public', '500.html');
-    const custom500b = resolve(root, 'public', '500.htm');
+    const custom500a = resolve(root, '.flux', '500.html');
+    const custom500b = resolve(root, '.flux', '500.htm');
     if (await fs.pathExists(custom500a)) {
       res.end(await fs.readFile(custom500a, 'utf-8'));
       return;
