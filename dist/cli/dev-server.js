@@ -3039,7 +3039,6 @@ var StorageManager = class {
     this.publicPath = path4.join(this.storageRoot, this.options.publicPath);
     this.uploadsPath = path4.join(this.storageRoot, this.options.uploadsPath);
     this.tempPath = path4.join(this.storageRoot, this.options.tempPath);
-    this.initializeStorage();
   }
   async initializeStorage() {
     try {

@@ -26,7 +26,7 @@ class StorageManager {
     this.uploadsPath = path.join(this.storageRoot, this.options.uploadsPath);
     this.tempPath = path.join(this.storageRoot, this.options.tempPath);
     
-    this.initializeStorage();
+    // Do not auto-initialize at import time; let callers initialize explicitly
   }
 
   async initializeStorage() {
