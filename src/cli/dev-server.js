@@ -41,13 +41,17 @@ export async function devServer(options = {}) {
   console.log(chalk.blue('🚀 Starting Flux Development Server...'));
   
   try {
-    // Initialize configuration system only if config file exists
-    const configPath = resolve(root, 'flux.config.js');
-    if (await fs.pathExists(configPath)) {
-      console.log(chalk.blue('📋 Loading configuration...'));
-      await configManager.loadConfiguration();
+    // Initialize application configuration only if app config exists
+    const appConfigPath = resolve(root, 'src', 'config', 'config.js');
+    if (await fs.pathExists(appConfigPath)) {
+      console.log(chalk.blue('📋 Loading application configuration...'));
+      try {
+        await configManager.loadConfiguration();
+      } catch (e) {
+        console.warn(chalk.yellow(`⚠️  Config load failed (${e?.message || e}). Continuing with defaults.`));
+      }
     } else {
-      console.log(chalk.yellow('⚠️  No flux.config.js found, using default configuration'));
+      console.log(chalk.yellow('⚠️  No src/config/config.js found, using default configuration'));
     }
     
     // Initialize storage system only if needed
