@@ -1,0 +1,52 @@
+{
+  "name": "flux-lang",
+  "version": "2.0.0",
+  "description": "A next-generation web programming language for ultra-fast rendering with advanced features",
+  "main": "./index.js",
+  "type": "module",
+  "bin": {
+    "flux": "./cli.js"
+  },
+  "keywords": [
+    "programming-language",
+    "compiler",
+    "web-framework",
+    "reactive",
+    "webassembly",
+    "jsx",
+    "virtual-dom",
+    "performance",
+    "testing",
+    "cli"
+  ],
+  "author": "Flux Team",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^11.1.0",
+    "events": "^3.3.0",
+    "fs-extra": "^11.2.0",
+    "glob": "^10.3.10"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/flux-lang/flux.git"
+  },
+  "bugs": {
+    "url": "https://github.com/flux-lang/flux/issues"
+  },
+  "homepage": "https://flux-lang.dev",
+  "files": [
+    "*.js",
+    "*.js.map",
+    "runtime",
+    "compiler",
+    "ast",
+    "cli",
+    "errors.js",
+    "README.md"
+  ]
+}
