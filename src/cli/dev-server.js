@@ -5,6 +5,7 @@ import { createServer } from 'http';
 import { createReadStream } from 'fs';
 import { stat, readFile, readdir, access } from 'fs/promises';
 import { extname, join, resolve } from 'path';
+import { pathToFileURL } from 'url';
 import fs from 'fs-extra';
 import { FluxCompiler } from '../compiler/index.js';
 import { configManager } from '../config/index.js';
@@ -78,6 +79,9 @@ export async function devServer(options = {}) {
   // WebSocket connections for live reload
   const connections = new Set();
   
+  // Load user middlewares if present
+  const userMiddlewares = await loadUserMiddlewares(root);
+
   const server = createServer(async (req, res) => {
     try {
       const url = new URL(req.url, `http://${finalHost}:${finalPort}`);
@@ -98,6 +102,18 @@ export async function devServer(options = {}) {
         return;
       }
       
+      // Run user middleware pipeline
+      for (const mw of userMiddlewares) {
+        try {
+          const result = await mw({ req, res, url, root, filePath });
+          if (res.writableEnded || result === false) {
+            return;
+          }
+        } catch (mwErr) {
+          console.warn('Middleware error:', mwErr?.message || mwErr);
+        }
+      }
+
       const fullPath = resolve(root, filePath);
       
       try {
@@ -148,13 +164,12 @@ export async function devServer(options = {}) {
           await serveFile(publicPath, res);
         } catch {
           // 404
-          await serve404(res, filePath);
+          await serve404(res, filePath, root);
         }
       }
     } catch (error) {
       console.error('Server error:', error);
-      res.writeHead(500);
-      res.end('Internal Server Error');
+      await serve500(res, error, root);
     }
   });
   
@@ -308,9 +323,23 @@ async function compileAndServeFlux(fluxPath, res, compiler) {
   }
 }
 
-async function serve404(res, filePath) {
+async function serve404(res, filePath, root) {
   res.setHeader('Content-Type', 'text/html');
   res.writeHead(404);
+  
+  // Custom 404 if provided
+  try {
+    const custom404a = resolve(root, 'public', '404.html');
+    const custom404b = resolve(root, 'public', '404.htm');
+    if (await fs.pathExists(custom404a)) {
+      res.end(await fs.readFile(custom404a, 'utf-8'));
+      return;
+    }
+    if (await fs.pathExists(custom404b)) {
+      res.end(await fs.readFile(custom404b, 'utf-8'));
+      return;
+    }
+  } catch {}
   
   const html = `
 <!DOCTYPE html>
@@ -330,6 +359,42 @@ async function serve404(res, filePath) {
 </html>`;
   
   res.end(html);
+}
+
+async function serve500(res, error, root) {
+  try {
+    res.setHeader('Content-Type', 'text/html');
+    res.writeHead(500);
+    const custom500a = resolve(root, 'public', '500.html');
+    const custom500b = resolve(root, 'public', '500.htm');
+    if (await fs.pathExists(custom500a)) {
+      res.end(await fs.readFile(custom500a, 'utf-8'));
+      return;
+    }
+    if (await fs.pathExists(custom500b)) {
+      res.end(await fs.readFile(custom500b, 'utf-8'));
+      return;
+    }
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>500 - Internal Server Error</title>
+  <style>
+    body { font-family: monospace; margin: 40px; }
+    .error { color: #e74c3c; font-size: 14px; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>500 - Internal Server Error</h1>
+  <div class="error">${(error && (error.stack || error.message)) || 'Unknown error'}</div>
+</body>
+</html>`;
+    res.end(html);
+  } catch {
+    res.writeHead(500);
+    res.end('Internal Server Error');
+  }
 }
 
 async function setupFileWatching(root, compiler, connections) {
@@ -457,4 +522,19 @@ class WebSocket {
       this.closeCallback();
     }
   }
+}
+
+// Load user middlewares from src/middleware/index.js if present
+async function loadUserMiddlewares(root) {
+  try {
+    const candidate = resolve(root, 'src', 'middleware', 'index.js');
+    if (await fs.pathExists(candidate)) {
+      const mod = await import(pathToFileURL(candidate).href);
+      const list = mod.default || mod.middlewares;
+      if (Array.isArray(list)) return list;
+    }
+  } catch (e) {
+    console.warn('Warning: failed to load user middleware:', e?.message || e);
+  }
+  return [];
 }
