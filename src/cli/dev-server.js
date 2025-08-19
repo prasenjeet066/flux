@@ -82,6 +82,15 @@ export async function devServer(options = {}) {
           await serveFile(fluxIndex, res);
           return;
         } catch {}
+        
+        // If no explicit index, serve a generated default that mounts src/app.flux if present
+        try {
+          const appFluxPath = resolve(root, 'src', 'app.flux');
+          await access(appFluxPath);
+          await serveDefaultIndexHTML(res, { title: 'Flux App' });
+          return;
+        } catch {}
+        
         filePath = '/index.html';
       }
       
@@ -133,6 +142,15 @@ export async function devServer(options = {}) {
           }
         }
         
+        // Compile .flux files directly when requested
+        if (filePath.endsWith('.flux')) {
+          try {
+            await access(fullPath);
+            await compileAndServeFlux(fullPath, res, compiler);
+            return;
+          } catch {}
+        }
+        
         // File not found, try to compile Flux files
         if (filePath.endsWith('.js') && !filePath.includes('node_modules')) {
           const fluxPath = filePath.replace(/\.js$/, '.flux');
@@ -163,6 +181,11 @@ export async function devServer(options = {}) {
           await access(publicPath);
           await serveFile(publicPath, res);
         } catch {
+          // If root index requested and missing, serve default index mounting src/app.flux
+          if (filePath === 'index.html') {
+            await serveDefaultIndexHTML(res, { title: 'Flux App' });
+            return;
+          }
           // 404
           await serve404(res, filePath);
         }
@@ -233,6 +256,30 @@ async function serveFile(filePath, res) {
     res.writeHead(500);
     res.end('Error reading file');
   });
+}
+
+async function serveDefaultIndexHTML(res, { title } = { title: 'Flux App' }) {
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${title}</title>
+  <style>html,body,#root{height:100%}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f6f7f9}</style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module">
+    import App from '/src/app.flux';
+    import { FluxRuntime } from '/node_modules/flux-compiler/dist/runtime/index.js';
+    FluxRuntime.mount(App, '#root');
+  </script>
+</body>
+</html>`;
+  res.setHeader('Content-Type', 'text/html');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.writeHead(200);
+  res.end(html);
 }
 
 async function serveDirectoryListing(dirPath, res, urlPath) {
