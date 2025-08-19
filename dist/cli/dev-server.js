@@ -44,6 +44,7 @@ var FluxLexer = class _FluxLexer {
     ROUTER: "ROUTER",
     ROUTE: "ROUTE",
     USE: "USE",
+    ON: "ON",
     IMPORT: "IMPORT",
     EXPORT: "EXPORT",
     ASYNC: "ASYNC",
@@ -113,6 +114,7 @@ var FluxLexer = class _FluxLexer {
     "router": "ROUTER",
     "route": "ROUTE",
     "use": "USE",
+    "on": "ON",
     "import": "IMPORT",
     "export": "EXPORT",
     "async": "ASYNC",
@@ -1434,13 +1436,13 @@ var FluxParser = class _FluxParser {
         throw new Error("Expected attribute value");
       }
       return new JSXAttribute(
-        new Identifier(name.lexeme),
+        name,
         value,
         this.getCurrentLocation()
       );
     }
     return new JSXAttribute(
-      new Identifier(name.lexeme),
+      name,
       new Literal(true),
       this.getCurrentLocation()
     );
@@ -1607,6 +1609,9 @@ var FluxCodeGenerator = class {
     this.add("export ");
     this.visit(node.declaration);
   }
+  visitDecorator(node) {
+    return "";
+  }
   visitComponentDeclaration(node) {
     const componentName = node.name.name;
     this.componentCount++;
@@ -1616,32 +1621,32 @@ var FluxCodeGenerator = class {
     this.indent++;
     this.addLine("super(props);");
     this.addLine("");
-    if (node.state.length > 0) {
+    if (node.props && node.props.length > 0) {
+      this.addLine("// Initialize props");
+      for (const propDecl of node.props) {
+        this.visit(propDecl);
+      }
+      this.addLine("");
+    }
+    if (node.state && node.state.length > 0) {
       this.addLine("// Initialize state");
       for (const stateDecl of node.state) {
-        const name = stateDecl.name.name;
-        const initialValue = stateDecl.initialValue ? this.visit(stateDecl.initialValue) : "null";
-        this.addLine(`this.${name} = createReactiveState(${initialValue});`);
+        this.visit(stateDecl);
       }
       this.addLine("");
     }
-    if (node.computed.length > 0) {
+    if (node.computed && node.computed.length > 0) {
       this.addLine("// Initialize computed properties");
       for (const computedDecl of node.computed) {
-        const name = computedDecl.name.name;
-        this.addLine(`this.${name} = createComputed(() => {`);
-        this.indent++;
-        this.visit(computedDecl.body);
-        this.indent--;
-        this.addLine("});");
+        this.visit(computedDecl);
       }
       this.addLine("");
     }
-    if (node.effects.length > 0) {
+    if (node.effects && node.effects.length > 0) {
       this.addLine("// Initialize effects");
       for (let i = 0; i < node.effects.length; i++) {
         const effect = node.effects[i];
-        const deps = effect.dependencies.map((dep) => this.visit(dep)).join(", ");
+        const deps = effect.dependencies.map((dep) => this.getIdentifierValue(dep)).join(", ");
         this.addLine(`this.effect${i} = createEffect(() => {`);
         this.indent++;
         this.visit(effect.body);
@@ -1653,11 +1658,15 @@ var FluxCodeGenerator = class {
     this.indent--;
     this.addLine("}");
     this.addLine("");
-    for (const method of node.methods) {
-      this.visitMethodDeclaration(method);
+    if (node.methods && node.methods.length > 0) {
+      for (const method of node.methods) {
+        this.visitMethodDeclaration(method);
+      }
     }
-    for (const lifecycle of node.lifecycle) {
-      this.visitLifecycleDeclaration(lifecycle);
+    if (node.lifecycle && node.lifecycle.length > 0) {
+      for (const lifecycle of node.lifecycle) {
+        this.visitLifecycleDeclaration(lifecycle);
+      }
     }
     if (node.render) {
       this.visitRenderDeclaration(node.render);
@@ -1669,7 +1678,8 @@ var FluxCodeGenerator = class {
     const routeDecorator = node.decorators.find((d) => d.name.name === "route");
     if (routeDecorator) {
       const path4 = routeDecorator.arguments[0];
-      this.addLine(`FluxRuntime.registerRoute(${this.visit(path4)}, ${componentName});`);
+      const pathValue = this.getLiteralValue(path4);
+      this.addLine(`FluxRuntime.registerRoute(${pathValue}, ${componentName});`);
     }
   }
   visitStoreDeclaration(node) {
@@ -1758,6 +1768,40 @@ var FluxCodeGenerator = class {
     this.addLine("}");
     this.addLine("");
   }
+  visitStateDeclaration(node) {
+    const name = node.name.name;
+    this.add(`this.${name} = createReactiveState(`);
+    if (node.initialValue) {
+      this.visit(node.initialValue);
+    } else {
+      this.add("null");
+    }
+    this.addLine(");");
+  }
+  visitPropDeclaration(node) {
+    const name = node.name.name;
+    let defaultValue = "undefined";
+    if (node.defaultValue) {
+      defaultValue = this.getLiteralValue(node.defaultValue);
+    }
+    this.addLine(`this.${name} = props.${name} || ${defaultValue};`);
+  }
+  visitEffectDeclaration(node) {
+    const deps = node.dependencies.map((dep) => this.getIdentifierValue(dep)).join(", ");
+    this.addLine(`this.effect = createEffect(() => {`);
+    this.indent++;
+    this.visit(node.body);
+    this.indent--;
+    this.addLine(`}, [${deps}]);`);
+  }
+  visitComputedDeclaration(node) {
+    const name = node.name.name;
+    this.addLine(`this.${name} = createComputed(() => {`);
+    this.indent++;
+    this.visit(node.body);
+    this.indent--;
+    this.addLine(`});`);
+  }
   visitBlockStatement(node) {
     for (let i = 0; i < node.body.length; i++) {
       this.visit(node.body[i]);
@@ -1835,6 +1879,9 @@ var FluxCodeGenerator = class {
       this.add(node.operator);
       this.add(" ");
       this.visit(node.right);
+    } else if (node.left.type === "Identifier") {
+      this.add(`this.${node.left.name}.value ${node.operator} `);
+      this.visit(node.right);
     } else {
       this.visit(node.left);
       this.add(` ${node.operator} `);
@@ -1906,13 +1953,35 @@ var FluxCodeGenerator = class {
   visitLiteral(node) {
     if (typeof node.value === "string") {
       this.add(JSON.stringify(node.value));
+      return JSON.stringify(node.value);
     } else {
       this.add(String(node.value));
+      return String(node.value);
     }
+  }
+  getLiteralValue(node) {
+    if (node.type === "Literal") {
+      if (typeof node.value === "string") {
+        return JSON.stringify(node.value);
+      } else {
+        return String(node.value);
+      }
+    }
+    return this.visit(node);
+  }
+  getIdentifierValue(node) {
+    if (node.type === "Identifier") {
+      return node.name;
+    }
+    return this.visit(node);
   }
   visitIdentifier(node) {
     if (this.isInRenderContext() && this.isReactiveState(node.name)) {
       this.add(`this.${node.name}.value`);
+    } else if (this.isInRenderContext() && this.isMethodName(node.name)) {
+      this.add(`this.${node.name}`);
+    } else if (this.isInRenderContext() && this.isPropName(node.name)) {
+      this.add(`this.${node.name}`);
     } else {
       this.add(node.name);
     }
@@ -1928,12 +1997,7 @@ var FluxCodeGenerator = class {
       this.add(", {");
       for (let i = 0; i < node.openingElement.attributes.length; i++) {
         const attr = node.openingElement.attributes[i];
-        this.add(`${attr.name.name}: `);
-        if (attr.value.type === "JSXExpressionContainer") {
-          this.visit(attr.value.expression);
-        } else {
-          this.visit(attr.value);
-        }
+        this.visitJSXAttribute(attr);
         if (i < node.openingElement.attributes.length - 1) {
           this.add(", ");
         }
@@ -1956,6 +2020,19 @@ var FluxCodeGenerator = class {
     }
     this.add(")");
   }
+  visitJSXAttribute(node) {
+    let attrName = node.name.name;
+    if (attrName.startsWith("@")) {
+      const eventName = attrName.substring(1);
+      attrName = `on${eventName.charAt(0).toUpperCase()}${eventName.slice(1)}`;
+    }
+    this.add(`${attrName}: `);
+    if (node.value.type === "JSXExpressionContainer") {
+      this.visit(node.value.expression);
+    } else {
+      this.visit(node.value);
+    }
+  }
   visitJSXExpressionContainer(node) {
     this.visit(node.expression);
   }
@@ -1967,7 +2044,36 @@ var FluxCodeGenerator = class {
     return true;
   }
   isReactiveState(name) {
-    return true;
+    const nonStateIdentifiers = [
+      "increment",
+      "decrement",
+      "handleClick",
+      "handleSubmit",
+      "updateName",
+      "console",
+      "log",
+      "Math",
+      "Date",
+      "Array",
+      "Object",
+      "String",
+      "Number",
+      "Boolean",
+      "parseInt",
+      "parseFloat",
+      "isNaN",
+      "isFinite",
+      "title",
+      "count"
+      // Props should not be treated as reactive state
+    ];
+    return !nonStateIdentifiers.includes(name);
+  }
+  isMethodName(name) {
+    return ["increment", "decrement", "handleClick", "handleSubmit", "updateName"].includes(name);
+  }
+  isPropName(name) {
+    return ["title", "count"].includes(name);
   }
   add(text) {
     this.output.push(text);

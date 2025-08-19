@@ -901,7 +901,7 @@ export class FluxParser {
       }
       
       return new AST.JSXAttribute(
-        new AST.Identifier(name.lexeme),
+        name,
         value,
         this.getCurrentLocation()
       );
@@ -909,7 +909,7 @@ export class FluxParser {
     
     // Boolean attribute
     return new AST.JSXAttribute(
-      new AST.Identifier(name.lexeme),
+      name,
       new AST.Literal(true),
       this.getCurrentLocation()
     );

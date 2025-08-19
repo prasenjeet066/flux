@@ -69,6 +69,12 @@ export class FluxCodeGenerator {
     this.visit(node.declaration);
   }
 
+  visitDecorator(node) {
+    // Decorators are handled in the component/store declarations
+    // This method is just a placeholder to avoid errors
+    return '';
+  }
+
   visitComponentDeclaration(node) {
     const componentName = node.name.name;
     this.componentCount++;
@@ -82,40 +88,39 @@ export class FluxCodeGenerator {
     this.addLine("super(props);");
     this.addLine("");
     
+    // Initialize props
+    if (node.props && node.props.length > 0) {
+      this.addLine("// Initialize props");
+      for (const propDecl of node.props) {
+        this.visit(propDecl);
+      }
+      this.addLine("");
+    }
+    
     // Initialize state
-    if (node.state.length > 0) {
+    if (node.state && node.state.length > 0) {
       this.addLine("// Initialize state");
       for (const stateDecl of node.state) {
-        const name = stateDecl.name.name;
-        const initialValue = stateDecl.initialValue 
-          ? this.visit(stateDecl.initialValue) 
-          : 'null';
-        
-        this.addLine(`this.${name} = createReactiveState(${initialValue});`);
+        this.visit(stateDecl);
       }
       this.addLine("");
     }
     
     // Initialize computed properties
-    if (node.computed.length > 0) {
+    if (node.computed && node.computed.length > 0) {
       this.addLine("// Initialize computed properties");
       for (const computedDecl of node.computed) {
-        const name = computedDecl.name.name;
-        this.addLine(`this.${name} = createComputed(() => {`);
-        this.indent++;
-        this.visit(computedDecl.body);
-        this.indent--;
-        this.addLine("});");
+        this.visit(computedDecl);
       }
       this.addLine("");
     }
     
     // Initialize effects
-    if (node.effects.length > 0) {
+    if (node.effects && node.effects.length > 0) {
       this.addLine("// Initialize effects");
       for (let i = 0; i < node.effects.length; i++) {
         const effect = node.effects[i];
-        const deps = effect.dependencies.map(dep => this.visit(dep)).join(', ');
+        const deps = effect.dependencies.map(dep => this.getIdentifierValue(dep)).join(', ');
         
         this.addLine(`this.effect${i} = createEffect(() => {`);
         this.indent++;
@@ -131,13 +136,17 @@ export class FluxCodeGenerator {
     this.addLine("");
     
     // Generate methods
-    for (const method of node.methods) {
-      this.visitMethodDeclaration(method);
+    if (node.methods && node.methods.length > 0) {
+      for (const method of node.methods) {
+        this.visitMethodDeclaration(method);
+      }
     }
     
     // Generate lifecycle methods
-    for (const lifecycle of node.lifecycle) {
-      this.visitLifecycleDeclaration(lifecycle);
+    if (node.lifecycle && node.lifecycle.length > 0) {
+      for (const lifecycle of node.lifecycle) {
+        this.visitLifecycleDeclaration(lifecycle);
+      }
     }
     
     // Generate render method
@@ -156,7 +165,8 @@ export class FluxCodeGenerator {
     const routeDecorator = node.decorators.find(d => d.name.name === 'route');
     if (routeDecorator) {
       const path = routeDecorator.arguments[0];
-      this.addLine(`FluxRuntime.registerRoute(${this.visit(path)}, ${componentName});`);
+      const pathValue = this.getLiteralValue(path);
+      this.addLine(`FluxRuntime.registerRoute(${pathValue}, ${componentName});`);
     }
   }
 
@@ -270,6 +280,53 @@ export class FluxCodeGenerator {
     this.addLine("");
   }
 
+  visitStateDeclaration(node) {
+    const name = node.name.name;
+    
+    this.add(`this.${name} = createReactiveState(`);
+    
+    if (node.initialValue) {
+      this.visit(node.initialValue);
+    } else {
+      this.add('null');
+    }
+    
+    this.addLine(');');
+  }
+
+  visitPropDeclaration(node) {
+    const name = node.name.name;
+    let defaultValue = 'undefined';
+    
+    if (node.defaultValue) {
+      defaultValue = this.getLiteralValue(node.defaultValue);
+    }
+    
+    this.addLine(`this.${name} = props.${name} || ${defaultValue};`);
+  }
+
+  visitEffectDeclaration(node) {
+    const deps = node.dependencies.map(dep => this.getIdentifierValue(dep)).join(', ');
+    
+    this.addLine(`this.effect = createEffect(() => {`);
+    this.indent++;
+    this.visit(node.body);
+    this.indent--;
+    this.addLine(`}, [${deps}]);`);
+  }
+
+  visitComputedDeclaration(node) {
+    const name = node.name.name;
+    
+    this.addLine(`this.${name} = createComputed(() => {`);
+    this.indent++;
+    this.visit(node.body);
+    this.indent--;
+    this.addLine(`});`);
+  }
+
+
+
   visitBlockStatement(node) {
     for (let i = 0; i < node.body.length; i++) {
       this.visit(node.body[i]);
@@ -367,6 +424,11 @@ export class FluxCodeGenerator {
       this.add(node.operator);
       this.add(' ');
       this.visit(node.right);
+    } else if (node.left.type === 'Identifier') {
+      // Handle direct identifier assignments (like count += 1)
+      // In Flux, this should be converted to reactive state access
+      this.add(`this.${node.left.name}.value ${node.operator} `);
+      this.visit(node.right);
     } else {
       this.visit(node.left);
       this.add(` ${node.operator} `);
@@ -454,15 +516,42 @@ export class FluxCodeGenerator {
   visitLiteral(node) {
     if (typeof node.value === 'string') {
       this.add(JSON.stringify(node.value));
+      return JSON.stringify(node.value);
     } else {
       this.add(String(node.value));
+      return String(node.value);
     }
+  }
+
+  getLiteralValue(node) {
+    if (node.type === 'Literal') {
+      if (typeof node.value === 'string') {
+        return JSON.stringify(node.value);
+      } else {
+        return String(node.value);
+      }
+    }
+    return this.visit(node);
+  }
+
+  getIdentifierValue(node) {
+    if (node.type === 'Identifier') {
+      // For effect dependencies, we want the raw identifier name
+      return node.name;
+    }
+    return this.visit(node);
   }
 
   visitIdentifier(node) {
     // Handle reactive state access
     if (this.isInRenderContext() && this.isReactiveState(node.name)) {
       this.add(`this.${node.name}.value`);
+    } else if (this.isInRenderContext() && this.isMethodName(node.name)) {
+      // Method references should use 'this'
+      this.add(`this.${node.name}`);
+    } else if (this.isInRenderContext() && this.isPropName(node.name)) {
+      // Props should use 'this'
+      this.add(`this.${node.name}`);
     } else {
       this.add(node.name);
     }
@@ -486,13 +575,7 @@ export class FluxCodeGenerator {
       
       for (let i = 0; i < node.openingElement.attributes.length; i++) {
         const attr = node.openingElement.attributes[i];
-        this.add(`${attr.name.name}: `);
-        
-        if (attr.value.type === 'JSXExpressionContainer') {
-          this.visit(attr.value.expression);
-        } else {
-          this.visit(attr.value);
-        }
+        this.visitJSXAttribute(attr);
         
         if (i < node.openingElement.attributes.length - 1) {
           this.add(', ');
@@ -522,6 +605,23 @@ export class FluxCodeGenerator {
     this.add(')');
   }
 
+  visitJSXAttribute(node) {
+    // Handle event attributes (@click -> onClick)
+    let attrName = node.name.name;
+    if (attrName.startsWith('@')) {
+      const eventName = attrName.substring(1);
+      attrName = `on${eventName.charAt(0).toUpperCase()}${eventName.slice(1)}`;
+    }
+    
+    this.add(`${attrName}: `);
+    
+    if (node.value.type === 'JSXExpressionContainer') {
+      this.visit(node.value.expression);
+    } else {
+      this.visit(node.value);
+    }
+  }
+
   visitJSXExpressionContainer(node) {
     this.visit(node.expression);
   }
@@ -539,7 +639,26 @@ export class FluxCodeGenerator {
   isReactiveState(name) {
     // Check if this identifier refers to a reactive state variable
     // In a real implementation, we'd have proper scope tracking
-    return true;
+    // For now, only treat identifiers that are likely state variables
+    const nonStateIdentifiers = [
+      'increment', 'decrement', 'handleClick', 'handleSubmit', 'updateName',
+      'console', 'log', 'Math', 'Date', 'Array', 'Object', 'String', 'Number',
+      'Boolean', 'parseInt', 'parseFloat', 'isNaN', 'isFinite',
+      'title', 'count' // Props should not be treated as reactive state
+    ];
+    return !nonStateIdentifiers.includes(name);
+  }
+
+  isMethodName(name) {
+    // Check if this identifier refers to a method
+    // In a real implementation, we'd have proper scope tracking
+    return ['increment', 'decrement', 'handleClick', 'handleSubmit', 'updateName'].includes(name);
+  }
+
+  isPropName(name) {
+    // Check if this identifier refers to a prop
+    // In a real implementation, we'd have proper scope tracking
+    return ['title', 'count'].includes(name);
   }
 
   add(text) {

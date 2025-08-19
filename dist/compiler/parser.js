@@ -31,6 +31,7 @@ var FluxLexer = class _FluxLexer {
     ROUTER: "ROUTER",
     ROUTE: "ROUTE",
     USE: "USE",
+    ON: "ON",
     IMPORT: "IMPORT",
     EXPORT: "EXPORT",
     ASYNC: "ASYNC",
@@ -100,6 +101,7 @@ var FluxLexer = class _FluxLexer {
     "router": "ROUTER",
     "route": "ROUTE",
     "use": "USE",
+    "on": "ON",
     "import": "IMPORT",
     "export": "EXPORT",
     "async": "ASYNC",
@@ -1421,13 +1423,13 @@ var FluxParser = class _FluxParser {
         throw new Error("Expected attribute value");
       }
       return new JSXAttribute(
-        new Identifier(name.lexeme),
+        name,
         value,
         this.getCurrentLocation()
       );
     }
     return new JSXAttribute(
-      new Identifier(name.lexeme),
+      name,
       new Literal(true),
       this.getCurrentLocation()
     );
