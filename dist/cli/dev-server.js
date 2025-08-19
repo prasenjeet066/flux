@@ -2408,11 +2408,24 @@ var ConfigManager = class {
   }
   async validateConfiguration() {
     const config = this.config.get("environment");
-    const required = ["app", "server", "database"];
-    for (const field of required) {
-      if (!config[field]) {
-        throw new Error(`Missing required configuration: ${field}`);
-      }
+    if (!config.app) {
+      config.app = {
+        name: "Flux App",
+        version: "1.0.0"
+      };
+    }
+    if (!config.server) {
+      config.server = {
+        port: 3e3,
+        host: "localhost"
+      };
+    }
+    if (!config.database) {
+      config.database = {
+        host: "localhost",
+        port: 5432,
+        database: "flux_dev"
+      };
     }
     await this.validateAppConfig(config.app);
     await this.validateServerConfig(config.server);
