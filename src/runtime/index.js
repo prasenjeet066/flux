@@ -1518,5 +1518,15 @@ export {
   Computed,
   VNode,
   VirtualDOM,
-  Router
+  Router,
+  Component,
+  Store,
+  FluxRuntime,
+  FluxCache,
+  FluxWebSocket,
+  FluxDevTools,
+  FluxProfiler
 };
+
+// Export the mount function
+export const mount = FluxRuntime.mount;
