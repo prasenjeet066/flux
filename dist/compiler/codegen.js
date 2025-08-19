@@ -224,6 +224,39 @@ var FluxCodeGenerator = class {
     this.addLine("}");
     this.addLine("");
   }
+  visitStylesDeclaration(node) {
+    const componentName = node.componentName.name;
+    this.addLine(`// styles ${componentName} {`);
+    for (const rule of node.rules) {
+      this.addLine(`//   ${rule.selector} {`);
+      for (const decl of rule.declarations) {
+        this.addLine(`//     ${decl.property}: ${decl.value}`);
+      }
+      this.addLine(`//   }`);
+    }
+    this.addLine(`// }`);
+    this.addLine(`if (typeof document !== 'undefined') {`);
+    this.indent++;
+    this.addLine(`const style = document.createElement('style');`);
+    this.addLine("style.textContent = `");
+    for (const rule of node.rules) {
+      let cssSelector = rule.selector;
+      if (cssSelector.startsWith(".")) {
+        cssSelector = `.${componentName}${cssSelector}`;
+      }
+      this.add(`${cssSelector} { `);
+      for (let i = 0; i < rule.declarations.length; i++) {
+        const decl = rule.declarations[i];
+        this.add(`${decl.property}: ${decl.value}`);
+        if (i < rule.declarations.length - 1) this.add("; ");
+      }
+      this.add(" } ");
+    }
+    this.addLine("`;");
+    this.addLine("document.head.appendChild(style);");
+    this.indent--;
+    this.addLine("}");
+  }
   visitBlockStatement(node) {
     for (let i = 0; i < node.body.length; i++) {
       this.visit(node.body[i]);

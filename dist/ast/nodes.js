@@ -384,6 +384,27 @@ var GuardDeclaration = class extends ASTNode {
     this.body = body;
   }
 };
+var StylesDeclaration = class extends ASTNode {
+  constructor(componentName, rules, location) {
+    super("StylesDeclaration", location);
+    this.componentName = componentName;
+    this.rules = rules;
+  }
+};
+var CSSRule = class extends ASTNode {
+  constructor(selector, declarations, location) {
+    super("CSSRule", location);
+    this.selector = selector;
+    this.declarations = declarations;
+  }
+};
+var CSSDeclaration = class extends ASTNode {
+  constructor(property, value, location) {
+    super("CSSDeclaration", location);
+    this.property = property;
+    this.value = value;
+  }
+};
 var TypeAnnotation = class extends ASTNode {
   constructor(typeAnnotation, location) {
     super("TypeAnnotation", location);
@@ -438,6 +459,8 @@ export {
   AssignmentExpression,
   BinaryExpression,
   BlockStatement,
+  CSSDeclaration,
+  CSSRule,
   CallExpression,
   CatchClause,
   ComponentDeclaration,
@@ -472,6 +495,7 @@ export {
   RouteDeclaration,
   StateDeclaration,
   StoreDeclaration,
+  StylesDeclaration,
   TSArrayType,
   TSBooleanKeyword,
   TSNumberKeyword,

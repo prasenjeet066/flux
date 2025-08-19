@@ -30,6 +30,7 @@ var FluxLexer = class _FluxLexer {
     GUARD: "GUARD",
     ROUTER: "ROUTER",
     ROUTE: "ROUTE",
+    STYLES: "STYLES",
     USE: "USE",
     IMPORT: "IMPORT",
     EXPORT: "EXPORT",
@@ -102,6 +103,7 @@ var FluxLexer = class _FluxLexer {
     "guard": "GUARD",
     "router": "ROUTER",
     "route": "ROUTE",
+    "styles": "STYLES",
     "use": "USE",
     "import": "IMPORT",
     "export": "EXPORT",
@@ -709,6 +711,27 @@ var GuardDeclaration = class extends ASTNode {
     this.body = body;
   }
 };
+var StylesDeclaration = class extends ASTNode {
+  constructor(componentName, rules, location) {
+    super("StylesDeclaration", location);
+    this.componentName = componentName;
+    this.rules = rules;
+  }
+};
+var CSSRule = class extends ASTNode {
+  constructor(selector, declarations, location) {
+    super("CSSRule", location);
+    this.selector = selector;
+    this.declarations = declarations;
+  }
+};
+var CSSDeclaration = class extends ASTNode {
+  constructor(property, value, location) {
+    super("CSSDeclaration", location);
+    this.property = property;
+    this.value = value;
+  }
+};
 var TSStringKeyword = class extends ASTNode {
   constructor(location) {
     super("TSStringKeyword", location);
@@ -786,6 +809,9 @@ var FluxParser = class _FluxParser {
       }
       if (this.match("GUARD")) {
         return this.guardDeclaration(decorators);
+      }
+      if (this.match("STYLES")) {
+        return this.stylesDeclaration();
       }
       return this.statement();
     } catch (error) {
@@ -1051,6 +1077,57 @@ var FluxParser = class _FluxParser {
       new Identifier(name.lexeme),
       parameters,
       body,
+      this.getCurrentLocation()
+    );
+  }
+  stylesDeclaration() {
+    const componentName = this.consume("IDENTIFIER", "Expected component name after styles");
+    this.consume("LEFT_BRACE", 'Expected "{" after component name');
+    const rules = [];
+    while (!this.check("RIGHT_BRACE") && !this.isAtEnd()) {
+      if (this.check("NEWLINE")) {
+        this.advance();
+        continue;
+      }
+      rules.push(this.cssRule());
+    }
+    this.consume("RIGHT_BRACE", 'Expected "}" after styles');
+    return new StylesDeclaration(
+      new Identifier(componentName.lexeme),
+      rules,
+      this.getCurrentLocation()
+    );
+  }
+  cssRule() {
+    let selector = "";
+    while (!this.check("LEFT_BRACE") && !this.check("NEWLINE") && !this.isAtEnd()) {
+      const token = this.advance();
+      selector += token.lexeme;
+    }
+    this.consume("LEFT_BRACE", 'Expected "{" after CSS selector');
+    const declarations = [];
+    while (!this.check("RIGHT_BRACE") && !this.isAtEnd()) {
+      if (this.check("NEWLINE")) {
+        this.advance();
+        continue;
+      }
+      const property = this.consume("IDENTIFIER", "Expected CSS property name");
+      this.consume("COLON", 'Expected ":" after CSS property');
+      let value = "";
+      while (!this.check("NEWLINE") && !this.check("RIGHT_BRACE") && !this.isAtEnd()) {
+        const token = this.advance();
+        value += token.lexeme;
+      }
+      declarations.push(new CSSDeclaration(
+        property.lexeme,
+        value.trim(),
+        this.getCurrentLocation()
+      ));
+    }
+    this.consume("RIGHT_BRACE", 'Expected "}" after CSS declarations');
+    return new CSSRule(
+      selector.trim(),
+      declarations,
       this.getCurrentLocation()
     );
   }
