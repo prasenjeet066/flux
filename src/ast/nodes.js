@@ -448,6 +448,33 @@ export class GuardDeclaration extends ASTNode {
   }
 }
 
+// Styles Declaration
+export class StylesDeclaration extends ASTNode {
+  constructor(componentName, rules, location) {
+    super('StylesDeclaration', location);
+    this.componentName = componentName;
+    this.rules = rules;
+  }
+}
+
+// CSS Rule
+export class CSSRule extends ASTNode {
+  constructor(selector, declarations, location) {
+    super('CSSRule', location);
+    this.selector = selector;
+    this.declarations = declarations;
+  }
+}
+
+// CSS Declaration
+export class CSSDeclaration extends ASTNode {
+  constructor(property, value, location) {
+    super('CSSDeclaration', location);
+    this.property = property;
+    this.value = value;
+  }
+}
+
 // Type annotations
 export class TypeAnnotation extends ASTNode {
   constructor(typeAnnotation, location) {

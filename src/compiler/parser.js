@@ -49,6 +49,10 @@ export class FluxParser {
       const decorators = [];
       while (this.check('AT')) {
         decorators.push(this.decorator());
+        // Skip newlines after decorators
+        while (this.check('NEWLINE')) {
+          this.advance();
+        }
       }
 
       if (this.match('COMPONENT')) {
@@ -61,6 +65,10 @@ export class FluxParser {
 
       if (this.match('GUARD')) {
         return this.guardDeclaration(decorators);
+      }
+
+      if (this.match('STYLES')) {
+        return this.stylesDeclaration();
       }
 
       return this.statement();
@@ -118,7 +126,15 @@ export class FluxParser {
 
   decorator() {
     this.consume('AT', 'Expected "@"');
-    const name = this.consume('IDENTIFIER', 'Expected decorator name');
+    
+    // Accept both identifiers and keywords as decorator names
+    let name;
+    if (this.check('IDENTIFIER') || this.check('ROUTE') || this.check('GUARD') || 
+        this.check('COMPONENT') || this.check('STORE')) {
+      name = this.advance();
+    } else {
+      throw new Error(`Expected decorator name. Got ${this.peek().type} "${this.peek().lexeme}" at line ${this.peek().line}`);
+    }
 
     let args = [];
     if (this.match('LEFT_PAREN')) {
@@ -166,6 +182,15 @@ export class FluxParser {
 
     if (this.match('PROP')) {
       return this.propDeclaration();
+    }
+
+    if (this.match('ASYNC')) {
+      // Handle async methods
+      if (this.match('METHOD')) {
+        return this.methodDeclaration(true); // Pass isAsync = true
+      } else {
+        throw new Error('Expected "method" after "async"');
+      }
     }
 
     if (this.match('METHOD')) {
@@ -233,8 +258,12 @@ export class FluxParser {
     );
   }
 
-  methodDeclaration() {
-    const isAsync = this.match('ASYNC');
+  methodDeclaration(isAsync = false) {
+    // If not passed as parameter, check for async keyword
+    if (!isAsync) {
+      isAsync = this.match('ASYNC');
+    }
+    
     const name = this.consume('IDENTIFIER', 'Expected method name');
 
     this.consume('LEFT_PAREN', 'Expected "("');
@@ -391,6 +420,76 @@ export class FluxParser {
     );
   }
 
+  stylesDeclaration() {
+    const componentName = this.consume('IDENTIFIER', 'Expected component name after styles');
+    
+    this.consume('LEFT_BRACE', 'Expected "{" after component name');
+    
+    const rules = [];
+    while (!this.check('RIGHT_BRACE') && !this.isAtEnd()) {
+      if (this.check('NEWLINE')) {
+        this.advance();
+        continue;
+      }
+      
+      rules.push(this.cssRule());
+    }
+    
+    this.consume('RIGHT_BRACE', 'Expected "}" after styles');
+    
+    return new AST.StylesDeclaration(
+      new AST.Identifier(componentName.lexeme),
+      rules,
+      this.getCurrentLocation(),
+    );
+  }
+
+  cssRule() {
+    // Parse selector (simplified - just identifiers, classes, and pseudo-classes)
+    let selector = '';
+    
+    // Handle class selectors, element selectors, etc.
+    while (!this.check('LEFT_BRACE') && !this.check('NEWLINE') && !this.isAtEnd()) {
+      const token = this.advance();
+      selector += token.lexeme;
+    }
+    
+    this.consume('LEFT_BRACE', 'Expected "{" after CSS selector');
+    
+    const declarations = [];
+    while (!this.check('RIGHT_BRACE') && !this.isAtEnd()) {
+      if (this.check('NEWLINE')) {
+        this.advance();
+        continue;
+      }
+      
+      // CSS property
+      const property = this.consume('IDENTIFIER', 'Expected CSS property name');
+      this.consume('COLON', 'Expected ":" after CSS property');
+      
+      // CSS value (simplified - just consume until newline)
+      let value = '';
+      while (!this.check('NEWLINE') && !this.check('RIGHT_BRACE') && !this.isAtEnd()) {
+        const token = this.advance();
+        value += token.lexeme;
+      }
+      
+      declarations.push(new AST.CSSDeclaration(
+        property.lexeme,
+        value.trim(),
+        this.getCurrentLocation(),
+      ));
+    }
+    
+    this.consume('RIGHT_BRACE', 'Expected "}" after CSS declarations');
+    
+    return new AST.CSSRule(
+      selector.trim(),
+      declarations,
+      this.getCurrentLocation(),
+    );
+  }
+
   // Statements
   statement() {
     if (this.match('IF')) {
@@ -535,6 +634,35 @@ export class FluxParser {
   }
 
   assignment() {
+    // Check for parenthesized arrow function parameters first
+    if (this.check('LEFT_PAREN')) {
+      const checkpoint = this.current;
+      try {
+        // Try to parse as arrow function parameters
+        this.advance(); // consume '('
+        const params = [];
+        
+        if (!this.check('RIGHT_PAREN')) {
+          do {
+            params.push(this.consume('IDENTIFIER', 'Expected parameter name'));
+          } while (this.match('COMMA'));
+        }
+        
+        this.consume('RIGHT_PAREN', 'Expected ")" after parameters');
+        
+        if (this.check('ARROW')) {
+          // This is indeed an arrow function
+          return this.arrowFunction(params);
+        } else {
+          // Not an arrow function, backtrack
+          this.current = checkpoint;
+        }
+      } catch (error) {
+        // Not arrow function parameters, backtrack
+        this.current = checkpoint;
+      }
+    }
+
     const expr = this.ternary();
 
     if (this.match('ASSIGN', 'PLUS_ASSIGN', 'MINUS_ASSIGN')) {
@@ -553,7 +681,59 @@ export class FluxParser {
       );
     }
 
+    // Handle single parameter arrow functions
+    if (this.check('ARROW')) {
+      return this.arrowFunction(expr);
+    }
+
     return expr;
+  }
+
+  arrowFunction(params) {
+    this.consume('ARROW', 'Expected "=>"');
+    
+    // Handle different parameter formats
+    let paramList = [];
+    if (Array.isArray(params)) {
+      // Multiple parameters from parenthesized list
+      paramList = params.map(p => new AST.Identifier(p.lexeme));
+    } else if (params.type === 'Identifier') {
+      // Single parameter
+      paramList = [params];
+    } else {
+      throw new Error('Invalid arrow function parameters');
+    }
+
+    // Parse body
+    let body;
+    if (this.check('LEFT_BRACE')) {
+      body = this.blockStatement();
+    } else if (this.check('LEFT_PAREN')) {
+      // Handle parenthesized expressions (like JSX in arrow functions)
+      this.advance(); // consume '('
+      
+      // Skip any newlines after the opening paren
+      while (this.check('NEWLINE')) {
+        this.advance();
+      }
+      
+      body = this.expression();
+      
+      // Skip any newlines before the closing paren
+      while (this.check('NEWLINE')) {
+        this.advance();
+      }
+      
+      this.consume('RIGHT_PAREN', 'Expected ")" after arrow function body');
+    } else {
+      body = this.assignment(); // Use assignment to handle nested expressions
+    }
+
+    return new AST.ArrowFunctionExpression(
+      paramList,
+      body,
+      this.getCurrentLocation(),
+    );
   }
 
   ternary() {
@@ -678,7 +858,7 @@ export class FluxParser {
   }
 
   unary() {
-    if (this.match('LOGICAL_NOT', 'MINUS', 'PLUS')) {
+    if (this.match('LOGICAL_NOT', 'MINUS', 'PLUS', 'AWAIT')) {
       const operator = this.previous();
       const right = this.unary();
       return new AST.UnaryExpression(
@@ -724,33 +904,6 @@ export class FluxParser {
           expr,
           new AST.Identifier(property.lexeme),
           false, // not computed
-          this.getCurrentLocation(),
-        );
-      } else if (this.match('ARROW')) {
-        // Arrow function
-        const params = [];
-        if (this.check('LEFT_PAREN')) {
-          this.advance(); // consume '('
-          if (!this.check('RIGHT_PAREN')) {
-            do {
-              params.push(this.consume('IDENTIFIER', 'Expected parameter name'));
-            } while (this.match('COMMA'));
-          }
-          this.consume('RIGHT_PAREN', 'Expected ")" after parameters');
-        } else {
-          params.push(this.consume('IDENTIFIER', 'Expected parameter name'));
-        }
-
-        let body;
-        if (this.check('LEFT_BRACE')) {
-          body = this.blockStatement();
-        } else {
-          body = this.expression();
-        }
-
-        expr = new AST.ArrowFunctionExpression(
-          params.map(p => new AST.Identifier(p.lexeme)),
-          body,
           this.getCurrentLocation(),
         );
       } else {
@@ -876,13 +1029,18 @@ export class FluxParser {
         this.consume('RIGHT_BRACE', 'Expected "}" after JSX expression');
         children.push(new AST.JSXExpressionContainer(expr));
       } else {
-        // Text content
-        let text = '';
-        while (!this.check('JSX_OPEN') && !this.check('JSX_CLOSE') && !this.check('LEFT_BRACE') && !this.isAtEnd()) {
-          text += this.advance().lexeme;
-        }
-        if (text.trim()) {
-          children.push(new AST.JSXText(text.trim()));
+        // Text content or skip whitespace
+        if (this.check('NEWLINE')) {
+          this.advance(); // Skip newlines in JSX
+        } else {
+          let text = '';
+          while (!this.check('JSX_OPEN') && !this.check('JSX_CLOSE') && !this.check('LEFT_BRACE') && 
+                 !this.check('NEWLINE') && !this.isAtEnd()) {
+            text += this.advance().lexeme;
+          }
+          if (text.trim()) {
+            children.push(new AST.JSXText(text.trim()));
+          }
         }
       }
     }

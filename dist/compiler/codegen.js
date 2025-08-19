@@ -55,6 +55,18 @@ var FluxCodeGenerator = class {
   visitComponentDeclaration(node) {
     const componentName = node.name.name;
     this.componentCount++;
+    for (const decorator of node.decorators) {
+      let decoratorStr = `@${decorator.name.name}`;
+      if (decorator.arguments && decorator.arguments.length > 0) {
+        decoratorStr += "(";
+        for (let i = 0; i < decorator.arguments.length; i++) {
+          decoratorStr += this.stringifyValue(decorator.arguments[i]);
+          if (i < decorator.arguments.length - 1) decoratorStr += ", ";
+        }
+        decoratorStr += ")";
+      }
+      this.addLine(`// ${decoratorStr}`);
+    }
     this.addLine(`class ${componentName} extends Component {`);
     this.indent++;
     this.addLine("constructor(props = {}) {");
@@ -480,6 +492,25 @@ var FluxCodeGenerator = class {
   }
   getIndent() {
     return "  ".repeat(this.indent);
+  }
+  stringifyValue(node) {
+    if (node.type === "Literal") {
+      if (typeof node.value === "string") {
+        return `"${node.value}"`;
+      }
+      return String(node.value);
+    }
+    if (node.type === "ObjectExpression") {
+      let result = "{ ";
+      for (let i = 0; i < node.properties.length; i++) {
+        const prop = node.properties[i];
+        result += `${prop.key.name || prop.key.value}: ${this.stringifyValue(prop.value)}`;
+        if (i < node.properties.length - 1) result += ", ";
+      }
+      result += " }";
+      return result;
+    }
+    return "unknown";
   }
 };
 var FluxOptimizer = class {
