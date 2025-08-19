@@ -75,7 +75,7 @@ export async function devServer(options = {}) {
 
         // Handle root path
         if (filePath === '/') {
-        // Prefer .flux/index.html if present
+          // Prefer .flux/index.html if present
           const fluxIndex = resolve(root, '.flux', 'index.html');
           try {
             await access(fluxIndex);
@@ -95,19 +95,23 @@ export async function devServer(options = {}) {
           return;
         }
 
+        // Map framework runtime/compiler requests to dist
+        const distMapped = await tryServeFromDist(root, filePath, res);
+        if (distMapped) return;
+
         const fullPath = resolve(root, filePath);
 
         try {
           const stats = await stat(fullPath);
 
           if (stats.isDirectory()) {
-          // Serve index.html for directories
+            // Serve index.html for directories
             const indexPath = join(fullPath, 'index.html');
             try {
               await access(indexPath);
               await serveFile(indexPath, res);
             } catch {
-            // Special case root: try .flux/index.html
+              // Special case root: try .flux/index.html
               if (fullPath === resolve(root)) {
                 const fluxIndex = resolve(root, '.flux', 'index.html');
                 try {
@@ -123,7 +127,17 @@ export async function devServer(options = {}) {
             await serveFile(fullPath, res);
           }
         } catch (error) {
-        // Try to serve from storage if file not found
+          // Serve compiled Flux directly when requesting .flux
+          if (filePath.endsWith('.flux')) {
+            const fullFluxPath = resolve(root, filePath);
+            try {
+              await access(fullFluxPath);
+              await compileAndServeFlux(fullFluxPath, res, compiler);
+              return;
+            } catch {}
+          }
+
+          // Try to serve from storage if file not found
           if (filePath.startsWith('storage/')) {
             try {
               await serveStorageFile(filePath, res);
@@ -133,7 +147,7 @@ export async function devServer(options = {}) {
             }
           }
 
-          // File not found, try to compile Flux files
+          // File not found, try to compile Flux files when .js requested
           if (filePath.endsWith('.js') && !filePath.includes('node_modules')) {
             const fluxPath = filePath.replace(/\.js$/, '.flux');
             const fullFluxPath = resolve(root, fluxPath);
@@ -143,7 +157,7 @@ export async function devServer(options = {}) {
               await compileAndServeFlux(fullFluxPath, res, compiler);
               return;
             } catch {
-            // Flux file doesn't exist
+              // Flux file doesn't exist
             }
           }
 
@@ -163,8 +177,11 @@ export async function devServer(options = {}) {
             await access(publicPath);
             await serveFile(publicPath, res);
           } catch {
-          // 404
-            await serve404(res, filePath);
+            // SPA fallback: serve index.html to let client-side router handle the route
+            const served = await serveSpaIndex(root, res);
+            if (!served) {
+              await serve404(res, filePath);
+            }
           }
         }
       } catch (error) {
@@ -348,6 +365,52 @@ async function serve404(res, filePath) {
   res.end(html);
 }
 
+async function serveSpaIndex(root, res) {
+  // Prefer .flux/index.html if present
+  const fluxIndex = resolve(root, '.flux', 'index.html');
+  try {
+    await access(fluxIndex);
+    await serveFile(fluxIndex, res);
+    return true;
+  } catch {}
+
+  // Fallback to project root index.html
+  const rootIndex = resolve(root, 'index.html');
+  try {
+    await access(rootIndex);
+    await serveFile(rootIndex, res);
+    return true;
+  } catch {}
+
+  return false;
+}
+
+async function tryServeFromDist(root, filePath, res) {
+  // Map certain module requests to dist output (for runtime, compiler, etc.)
+  const prefixes = ['runtime/', 'compiler/', 'ast/', 'cli/'];
+
+  if (prefixes.some(p => filePath.startsWith(p)) || filePath === 'errors.js' || filePath.endsWith('.map')) {
+    const distPath = resolve(root, 'dist', filePath);
+    try {
+      await access(distPath);
+      await serveFile(distPath, res);
+      return true;
+    } catch {}
+  }
+
+  // Also map top-level index.js exported bundle if requested
+  if (filePath === 'index.js') {
+    const distIndex = resolve(root, 'dist', 'index.js');
+    try {
+      await access(distIndex);
+      await serveFile(distIndex, res);
+      return true;
+    } catch {}
+  }
+
+  return false;
+}
+
 async function setupFileWatching(root, compiler, connections) {
   // Simple file watching using polling
   // In production, you'd use chokidar or similar
@@ -473,4 +536,12 @@ class WebSocket {
       this.closeCallback();
     }
   }
+}
+
+// Auto-start when executed directly
+if (process.argv[1] && process.argv[1].endsWith('dev-server.js')) {
+  devServer({ port: 3000, host: 'localhost' }).catch(err => {
+    console.error('Failed to start dev server:', err);
+    process.exit(1);
+  });
 }
