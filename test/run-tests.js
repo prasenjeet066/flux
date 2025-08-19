@@ -107,7 +107,7 @@ component TestComponent {
   const result = runner.compiler.compile(source);
   runner.assert(result !== null, 'Compilation should succeed');
   runner.assert(result.output.includes('class TestComponent'), 'Should generate class');
-  runner.assert(result.output.includes('this.count.value += 1'), 'Should preserve method logic');
+  runner.assert(result.output.replace(/\s+/g, ' ').includes('this.count.value += 1'), 'Should preserve method logic');
 });
 
 // Test 2: Store compilation
