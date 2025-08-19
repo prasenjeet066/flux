@@ -460,6 +460,57 @@ class StorageManager {
       throw error;
     }
   }
+
+  // Storage health check
+  async getStorageHealth() {
+    try {
+      const stats = await this.getStorageStats();
+      const publicHealth = await this.checkDirectoryHealth(this.publicPath);
+      const uploadsHealth = await this.checkDirectoryHealth(this.uploadsPath);
+      const tempHealth = await this.checkDirectoryHealth(this.tempPath);
+
+      const overallHealth = publicHealth && uploadsHealth && tempHealth;
+      
+      return {
+        status: overallHealth ? 'healthy' : 'degraded',
+        message: overallHealth ? 'All storage systems operational' : 'Some storage systems experiencing issues',
+        details: {
+          public: publicHealth ? 'operational' : 'issues detected',
+          uploads: uploadsHealth ? 'operational' : 'issues detected',
+          temp: tempHealth ? 'operational' : 'issues detected'
+        },
+        stats: stats,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      return {
+        status: 'unhealthy',
+        message: `Storage health check failed: ${error.message}`,
+        error: error.message,
+        timestamp: new Date().toISOString()
+      };
+    }
+  }
+
+  async checkDirectoryHealth(dirPath) {
+    try {
+      if (!await fs.pathExists(dirPath)) {
+        return false;
+      }
+      
+      // Check if directory is readable and writable
+      await fs.access(dirPath, fs.constants.R_OK | fs.constants.W_OK);
+      
+      // Check if we can create a test file
+      const testFile = path.join(dirPath, '.health-check');
+      await fs.writeFile(testFile, 'health check');
+      await fs.remove(testFile);
+      
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
 }
 
 // Create default instance

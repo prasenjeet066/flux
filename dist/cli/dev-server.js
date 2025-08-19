@@ -3017,6 +3017,7 @@ var FluxCache = class {
     return totalAge / this.cache.size;
   }
 };
+var mount = FluxRuntime.mount;
 
 // src/storage/index.js
 var __filename2 = fileURLToPath2(import.meta.url);
@@ -3389,6 +3390,48 @@ var StorageManager = class {
     } catch (error) {
       console.error("Error restoring from backup:", error);
       throw error;
+    }
+  }
+  // Storage health check
+  async getStorageHealth() {
+    try {
+      const stats = await this.getStorageStats();
+      const publicHealth = await this.checkDirectoryHealth(this.publicPath);
+      const uploadsHealth = await this.checkDirectoryHealth(this.uploadsPath);
+      const tempHealth = await this.checkDirectoryHealth(this.tempPath);
+      const overallHealth = publicHealth && uploadsHealth && tempHealth;
+      return {
+        status: overallHealth ? "healthy" : "degraded",
+        message: overallHealth ? "All storage systems operational" : "Some storage systems experiencing issues",
+        details: {
+          public: publicHealth ? "operational" : "issues detected",
+          uploads: uploadsHealth ? "operational" : "issues detected",
+          temp: tempHealth ? "operational" : "issues detected"
+        },
+        stats,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString()
+      };
+    } catch (error) {
+      return {
+        status: "unhealthy",
+        message: `Storage health check failed: ${error.message}`,
+        error: error.message,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString()
+      };
+    }
+  }
+  async checkDirectoryHealth(dirPath) {
+    try {
+      if (!await fs3.pathExists(dirPath)) {
+        return false;
+      }
+      await fs3.access(dirPath, fs3.constants.R_OK | fs3.constants.W_OK);
+      const testFile = path3.join(dirPath, ".health-check");
+      await fs3.writeFile(testFile, "health check");
+      await fs3.remove(testFile);
+      return true;
+    } catch (error) {
+      return false;
     }
   }
 };
