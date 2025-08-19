@@ -38,17 +38,17 @@ class PerformanceMonitor {
   }
 }
 
-// Advanced error handling
-class FluxError extends Error {
-  constructor(message, code, details = {}) {
-    super(message);
-    this.name = 'FluxError';
-    this.code = code;
-    this.details = details;
-    this.timestamp = new Date();
-    this.stack = this.stack || new Error().stack;
-  }
-}
+// Advanced error handling - using the one from errors.js
+// class FluxError extends Error {
+//   constructor(message, code, details = {}) {
+//     super(message);
+//     this.name = 'FluxError';
+//     this.code = code;
+//     this.details = details;
+//     this.timestamp = new Date();
+//     this.stack = this.stack || new Error().stack;
+//   }
+// }
 
 // Memory management and garbage collection
 class MemoryManager {
@@ -61,7 +61,7 @@ class MemoryManager {
   allocate(id, size, type) {
     this.allocations.set(id, { size, type, timestamp: Date.now() });
     this.currentMemory += size;
-    
+
     if (this.currentMemory > this.maxMemory) {
       this.garbageCollect();
     }
@@ -78,7 +78,7 @@ class MemoryManager {
   garbageCollect() {
     const now = Date.now();
     const maxAge = 5 * 60 * 1000; // 5 minutes
-    
+
     for (const [id, allocation] of this.allocations) {
       if (now - allocation.timestamp > maxAge) {
         this.deallocate(id);
@@ -91,7 +91,7 @@ class MemoryManager {
       currentMemory: this.currentMemory,
       maxMemory: this.maxMemory,
       allocationCount: this.allocations.size,
-      memoryUsage: (this.currentMemory / this.maxMemory) * 100
+      memoryUsage: (this.currentMemory / this.maxMemory) * 100,
     };
   }
 }
@@ -109,7 +109,7 @@ class ReactiveState {
     this._debounceTimer = null;
     this._history = options.history ? [initialValue] : null;
     this._maxHistory = options.maxHistory || 10;
-    
+
     // Performance tracking
     this._updateCount = 0;
     this._lastUpdate = Date.now();
@@ -120,7 +120,7 @@ class ReactiveState {
     if (currentEffect) {
       this._subscribers.add(currentEffect);
       currentEffect.dependencies.add(this);
-      
+
       // Track dependency access patterns
       if (!this._accessPatterns) {
         this._accessPatterns = new Map();
@@ -128,7 +128,7 @@ class ReactiveState {
       const effectId = currentEffect.id || 'unknown';
       this._accessPatterns.set(effectId, (this._accessPatterns.get(effectId) || 0) + 1);
     }
-    
+
     return this._value;
   }
 
@@ -136,7 +136,7 @@ class ReactiveState {
     if (this._comparator(newValue, this._value)) {
       const oldValue = this._value;
       this._value = newValue;
-      
+
       // Add to history if enabled
       if (this._history) {
         this._history.push(newValue);
@@ -144,18 +144,18 @@ class ReactiveState {
           this._history.shift();
         }
       }
-      
+
       // Batch updates for performance
       if (this._isBatching) {
         this._batchUpdates.add(this);
       } else {
         this.notify();
       }
-      
+
       // Update performance metrics
       this._updateCount++;
       this._lastUpdate = Date.now();
-      
+
       // Emit change event
       this.emit('change', { oldValue, newValue });
     }
@@ -187,7 +187,7 @@ class ReactiveState {
     if (this._debounceTimer) {
       clearTimeout(this._debounceTimer);
     }
-    
+
     this._debounceTimer = setTimeout(() => {
       this.value = newValue;
     }, this._debounceMs);
@@ -211,10 +211,10 @@ class ReactiveState {
   notify() {
     // Performance optimization: batch notifications
     if (this._subscribers.size === 0) return;
-    
+
     const subscribers = Array.from(this._subscribers);
     const startTime = performance.now() || Date.now();
-    
+
     for (const subscriber of subscribers) {
       try {
         subscriber.execute();
@@ -224,16 +224,16 @@ class ReactiveState {
         this._subscribers.delete(subscriber);
       }
     }
-    
+
     // Track notification performance
     const duration = (performance.now() || Date.now()) - startTime;
     if (duration > 16) { // Longer than one frame
       console.warn(`Slow reactive update: ${duration.toFixed(2)}ms`);
     }
-    
+
     // Clear computed cache
     this._computedCache.clear();
-    
+
     // Schedule component updates
     FluxRuntime.scheduleUpdate();
   }
@@ -243,11 +243,11 @@ class ReactiveState {
       callback,
       id: options.id || Math.random().toString(36),
       priority: options.priority || 0,
-      execute: () => callback(this._value)
+      execute: () => callback(this._value),
     };
-    
+
     this._subscribers.add(subscription);
-    
+
     return () => {
       this._subscribers.delete(subscription);
     };
@@ -274,7 +274,7 @@ class ReactiveState {
       this._eventListeners[event] = [];
     }
     this._eventListeners[event].push(listener);
-    
+
     return () => {
       const index = this._eventListeners[event].indexOf(listener);
       if (index > -1) {
@@ -290,7 +290,7 @@ class ReactiveState {
       lastUpdate: this._lastUpdate,
       subscriberCount: this._subscribers.size,
       hasHistory: !!this._history,
-      historySize: this._history ? this._history.length : 0
+      historySize: this._history ? this._history.length : 0,
     };
   }
 }
@@ -307,25 +307,25 @@ class Effect {
     this.executionCount = 0;
     this.lastExecution = null;
     this.executionTime = 0;
-    
+
     // Performance monitoring
     this._startTime = performance.now() || Date.now();
-    
+
     // Initial execution to capture dependencies
     this.execute();
   }
 
   execute() {
     if (!this.isActive) return;
-    
+
     const startTime = performance.now() || Date.now();
-    
+
     // Clear old dependencies
     for (const dep of this.dependencies) {
       dep._subscribers.delete(this);
     }
     this.dependencies.clear();
-    
+
     // Execute cleanup if exists
     if (this.cleanup) {
       try {
@@ -335,24 +335,24 @@ class Effect {
       }
       this.cleanup = null;
     }
-    
+
     // Execute with dependency tracking
     const prevEffect = currentEffect;
     currentEffect = this;
-    
+
     try {
       const result = this.fn();
-      
+
       // Handle cleanup function return
       if (typeof result === 'function') {
         this.cleanup = result;
       }
-      
+
       // Update metrics
       this.executionCount++;
       this.lastExecution = Date.now();
       this.executionTime = (performance.now() || Date.now()) - startTime;
-      
+
     } catch (error) {
       console.error('Error in effect execution:', error);
       throw error;
@@ -363,7 +363,7 @@ class Effect {
 
   dispose() {
     this.isActive = false;
-    
+
     // Execute cleanup
     if (this.cleanup) {
       try {
@@ -372,12 +372,12 @@ class Effect {
         console.error('Error in effect cleanup:', error);
       }
     }
-    
+
     // Clean up dependencies
     for (const dep of this.dependencies) {
       dep._subscribers.delete(this);
     }
-    
+
     this.dependencies.clear();
   }
 
@@ -388,7 +388,7 @@ class Effect {
       lastExecution: this.lastExecution,
       executionTime: this.executionTime,
       isActive: this.isActive,
-      dependencyCount: this.dependencies.size
+      dependencyCount: this.dependencies.size,
     };
   }
 }
@@ -412,21 +412,21 @@ class Computed {
 
   get value() {
     const now = Date.now();
-    
+
     // Check if cache is still valid
-    if (this._cached && 
-        (this.cacheStrategy === 'aggressive' || 
+    if (this._cached &&
+        (this.cacheStrategy === 'aggressive' ||
          now - this.lastCacheTime < this.maxCacheAge)) {
       this.hitCount++;
       return this._value;
     }
-    
+
     this.missCount++;
-    
+
     // Recompute value
     const prevEffect = currentEffect;
     currentEffect = this.effect;
-    
+
     try {
       this._value = this.fn();
       this._cached = true;
@@ -434,7 +434,7 @@ class Computed {
     } finally {
       currentEffect = prevEffect;
     }
-    
+
     return this._value;
   }
 
@@ -453,14 +453,14 @@ class Computed {
   getStats() {
     const total = this.hitCount + this.missCount;
     const hitRate = total > 0 ? (this.hitCount / total) * 100 : 0;
-    
+
     return {
       hitCount: this.hitCount,
       missCount: this.missCount,
-      hitRate: hitRate.toFixed(2) + '%',
+      hitRate: `${hitRate.toFixed(2)}%`,
       isCached: this._cached,
       lastCacheTime: this.lastCacheTime,
-      cacheAge: Date.now() - this.lastCacheTime
+      cacheAge: Date.now() - this.lastCacheTime,
     };
   }
 }
@@ -497,7 +497,7 @@ class VirtualDOM {
   createElement(type, props, ...children) {
     // Flatten children
     const flatChildren = children.flat().filter(child => child != null);
-    
+
     return new VNode(type, props, flatChildren);
   }
 
@@ -512,7 +512,7 @@ class VirtualDOM {
     }
 
     const patches = [];
-    
+
     // Diff props
     const propPatches = this.diffProps(oldNode.props, newNode.props);
     if (propPatches.length > 0) {
@@ -531,24 +531,24 @@ class VirtualDOM {
   diffProps(oldProps, newProps) {
     const patches = [];
     const allKeys = new Set([...Object.keys(oldProps), ...Object.keys(newProps)]);
-    
+
     for (const key of allKeys) {
       if (oldProps[key] !== newProps[key]) {
         patches.push({ key, value: newProps[key] });
       }
     }
-    
+
     return patches;
   }
 
   diffChildren(oldChildren, newChildren) {
     const patches = [];
     const maxLength = Math.max(oldChildren.length, newChildren.length);
-    
+
     for (let i = 0; i < maxLength; i++) {
       const oldChild = oldChildren[i];
       const newChild = newChildren[i];
-      
+
       if (!oldChild && newChild) {
         patches.push({ type: 'insert', index: i, node: newChild });
       } else if (oldChild && !newChild) {
@@ -560,14 +560,14 @@ class VirtualDOM {
         }
       }
     }
-    
+
     return patches;
   }
 
   // Batch updates for performance
   scheduleUpdate(component, newVNode) {
     this.pendingUpdates.set(component, newVNode);
-    
+
     if (!this.isUpdating) {
       this.isUpdating = true;
       this.processUpdates();
@@ -577,7 +577,7 @@ class VirtualDOM {
   processUpdates() {
     const updates = Array.from(this.pendingUpdates.entries());
     this.pendingUpdates.clear();
-    
+
     for (const [component, newVNode] of updates) {
       try {
         this.updateComponent(component, newVNode);
@@ -585,14 +585,14 @@ class VirtualDOM {
         console.error('Error updating component:', error);
       }
     }
-    
+
     this.isUpdating = false;
   }
 
   updateComponent(component, newVNode) {
     const oldVNode = component.currentVNode;
     const patches = this.diff(oldVNode, newVNode);
-    
+
     if (patches) {
       this.applyPatches(component.dom, patches);
       component.currentVNode = newVNode;
@@ -601,18 +601,18 @@ class VirtualDOM {
 
   applyPatches(dom, patches) {
     if (!dom) return;
-    
+
     for (const patch of patches) {
       switch (patch.type) {
-        case 'props':
-          this.applyPropPatches(dom, patch.patches);
-          break;
-        case 'children':
-          this.applyChildPatches(dom, patch.patches);
-          break;
-        case 'replace':
-          // Handle replacement
-          break;
+      case 'props':
+        this.applyPropPatches(dom, patch.patches);
+        break;
+      case 'children':
+        this.applyChildPatches(dom, patch.patches);
+        break;
+      case 'replace':
+        // Handle replacement
+        break;
       }
     }
   }
@@ -638,18 +638,18 @@ class VirtualDOM {
   applyChildPatches(dom, childPatches) {
     for (const patch of childPatches) {
       switch (patch.type) {
-        case 'insert':
-          const newChild = this.createDOMNode(patch.node);
-          dom.insertBefore(newChild, dom.children[patch.index] || null);
-          break;
-        case 'remove':
-          if (dom.children[patch.index]) {
-            dom.removeChild(dom.children[patch.index]);
-          }
-          break;
-        case 'update':
-          this.applyPatches(dom.children[patch.index], patch.diff);
-          break;
+      case 'insert':
+        const newChild = this.createDOMNode(patch.node);
+        dom.insertBefore(newChild, dom.children[patch.index] || null);
+        break;
+      case 'remove':
+        if (dom.children[patch.index]) {
+          dom.removeChild(dom.children[patch.index]);
+        }
+        break;
+      case 'update':
+        this.applyPatches(dom.children[patch.index], patch.diff);
+        break;
       }
     }
   }
@@ -658,7 +658,7 @@ class VirtualDOM {
     if (typeof vnode === 'string' || typeof vnode === 'number') {
       return document.createTextNode(vnode);
     }
-    
+
     if (vnode.type === Fragment) {
       const fragment = document.createDocumentFragment();
       for (const child of vnode.children) {
@@ -666,9 +666,9 @@ class VirtualDOM {
       }
       return fragment;
     }
-    
+
     const dom = document.createElement(vnode.type);
-    
+
     // Set props
     for (const [key, value] of Object.entries(vnode.props)) {
       if (key !== 'key' && key !== 'ref') {
@@ -683,12 +683,12 @@ class VirtualDOM {
         }
       }
     }
-    
+
     // Create children
     for (const child of vnode.children) {
       dom.appendChild(this.createDOMNode(child));
     }
-    
+
     vnode.dom = dom;
     return dom;
   }
@@ -705,12 +705,12 @@ class Router {
     this.mode = options.mode || (isBrowser ? 'browser' : 'hash');
     this.base = options.base || '';
     this.fallback = options.fallback || '/';
-    
+
     // Only initialize browser-specific features in browser environment
     if (isBrowser) {
       // Listen to browser navigation
       window.addEventListener('popstate', () => this.handleNavigation());
-      
+
       // Initial route
       this.handleNavigation();
     } else {
@@ -721,13 +721,13 @@ class Router {
 
   registerRoute(path, component, options = {}) {
     const routePattern = this.pathToRegex(path);
-    
+
     this.routes.set(path, {
       pattern: routePattern,
       component,
       guards: options.guards || [],
       loader: options.loader,
-      meta: options.meta
+      meta: options.meta,
     });
   }
 
@@ -741,13 +741,13 @@ class Router {
       .replace(/\//g, '\\/')
       .replace(/:([^\/]+)/g, '(?<$1>[^\/]+)')
       .replace(/\*/g, '.*');
-    
+
     return new RegExp(`^${pattern}$`);
   }
 
   async navigate(path, replace = false) {
     const route = this.findRoute(path);
-    
+
     if (!route) {
       console.warn(`No route found for path: ${path}`);
       return;
@@ -810,9 +810,9 @@ class Router {
     if (this.currentRoute) {
       const component = new this.currentRoute.component({
         ...data,
-        params: this.params
+        params: this.params,
       });
-      
+
       if (isBrowser) {
         const appContainer = document.getElementById('app') || document.body;
         component.mount(appContainer);
@@ -835,11 +835,11 @@ export class Component {
     this.isMounted = false;
     this.updateQueue = [];
     this.isUpdating = false;
-    
+
     // Bind methods
     this.setState = this.setState.bind(this);
     this.forceUpdate = this.forceUpdate.bind(this);
-    
+
     // Initialize component
     this.initialize();
   }
@@ -847,10 +847,10 @@ export class Component {
   initialize() {
     // Set current component for effect tracking
     setCurrentComponent(this);
-    
+
     // Initialize state from class properties
     this.initializeState();
-    
+
     // Run lifecycle methods
     if (this.componentDidMount) {
       this.componentDidMount();
@@ -873,7 +873,7 @@ export class Component {
     } else {
       Object.assign(this.state, updater);
     }
-    
+
     this.scheduleUpdate();
   }
 
@@ -889,7 +889,7 @@ export class Component {
 
   update() {
     if (!this.isMounted) return;
-    
+
     try {
       const newVNode = this.render();
       FluxRuntime.virtualDOM.scheduleUpdate(this, newVNode);
@@ -904,18 +904,18 @@ export class Component {
 
   mount(container) {
     this.container = container;
-    
+
     try {
       const vnode = this.render();
       this.currentVNode = vnode;
-      
+
       if (isBrowser) {
         this.dom = FluxRuntime.virtualDOM.createDOMNode(vnode);
         container.appendChild(this.dom);
       }
-      
+
       this.isMounted = true;
-      
+
       if (this.componentDidMount) {
         this.componentDidMount();
       }
@@ -928,12 +928,12 @@ export class Component {
     if (this.componentWillUnmount) {
       this.componentWillUnmount();
     }
-    
+
     // Clean up effects
     for (const effect of this.effects) {
       effect.dispose();
     }
-    
+
     this.isMounted = false;
   }
 
@@ -950,7 +950,7 @@ export class Store {
     this.computed = {};
     this.subscribers = new Set();
     this.middleware = [];
-    
+
     this.initialize();
   }
 
@@ -973,16 +973,16 @@ export class Store {
   // Dispatch action with middleware support
   async dispatch(actionName, ...args) {
     let result = this.actions[actionName];
-    
+
     if (!result) {
       throw new Error(`Action ${actionName} not found`);
     }
-    
+
     // Apply middleware
     for (const middleware of this.middleware) {
       result = middleware(result);
     }
-    
+
     try {
       const actionResult = await result(...args);
       this.notifySubscribers(actionName, actionResult);
@@ -1021,7 +1021,7 @@ export class Store {
       actionCount: Object.keys(this.actions).length,
       computedCount: Object.keys(this.computed).length,
       subscriberCount: this.subscribers.size,
-      middlewareCount: this.middleware.length
+      middlewareCount: this.middleware.length,
     };
   }
 }
@@ -1037,10 +1037,10 @@ export class FluxRuntime {
     if (callback) {
       this.updateQueue.add(callback);
     }
-    
+
     if (!this.isUpdating) {
       this.isUpdating = true;
-      
+
       // Use appropriate scheduling based on environment
       if (isBrowser && typeof requestAnimationFrame !== 'undefined') {
         requestAnimationFrame(() => {
@@ -1066,7 +1066,7 @@ export class FluxRuntime {
         console.error('Error during update:', error);
       }
     }
-    
+
     this.updateQueue.clear();
   }
 
@@ -1087,14 +1087,14 @@ export class FluxRuntime {
       if (typeof container === 'string') {
         container = document.querySelector(container);
       }
-      
+
       if (!container) {
         throw new Error('Container not found');
       }
-      
+
       const instance = new component();
       instance.mount(container);
-      
+
       return instance;
     } else {
       // Node.js environment - create instance without mounting
@@ -1127,12 +1127,12 @@ export function createReactiveState(initialValue) {
 
 export function createEffect(fn, dependencies) {
   const effect = new Effect(fn, dependencies);
-  
+
   // Add to current component's effects for cleanup
   if (currentComponent) {
     currentComponent.effects.push(effect);
   }
-  
+
   return effect;
 }
 
@@ -1168,44 +1168,44 @@ export const FluxGlobalState = {
   stores: new Map(),
   effects: new Set(),
   components: new Set(),
-  
+
   registerStore(name, store) {
     this.stores.set(name, store);
   },
-  
+
   getStore(name) {
     return this.stores.get(name);
   },
-  
+
   registerEffect(effect) {
     this.effects.add(effect);
   },
-  
+
   registerComponent(component) {
     this.components.add(component);
   },
-  
+
   cleanup() {
     // Clean up all effects
     for (const effect of this.effects) {
       effect.dispose();
     }
     this.effects.clear();
-    
+
     // Clean up all components
     for (const component of this.components) {
       component.unmount();
     }
     this.components.clear();
   },
-  
+
   getStats() {
     return {
       storeCount: this.stores.size,
       effectCount: this.effects.size,
-      componentCount: this.components.size
+      componentCount: this.components.size,
     };
-  }
+  },
 };
 
 // Advanced caching system
@@ -1226,7 +1226,7 @@ export class FluxCache {
       value,
       timestamp: Date.now(),
       ttl,
-      accessCount: 0
+      accessCount: 0,
     };
 
     this.cache.set(key, entry);
@@ -1298,7 +1298,7 @@ export class FluxCache {
       size: this.cache.size,
       maxSize: this.maxSize,
       hitRate: this.calculateHitRate(),
-      averageAge: this.calculateAverageAge()
+      averageAge: this.calculateAverageAge(),
     };
   }
 
@@ -1309,14 +1309,14 @@ export class FluxCache {
 
   calculateAverageAge() {
     if (this.cache.size === 0) return 0;
-    
+
     const now = Date.now();
     let totalAge = 0;
-    
+
     for (const entry of this.cache.values()) {
       totalAge += now - entry.timestamp;
     }
-    
+
     return totalAge / this.cache.size;
   }
 }
@@ -1329,9 +1329,9 @@ export class FluxWebSocket {
       reconnectInterval: 1000,
       maxReconnectAttempts: 5,
       heartbeatInterval: 30000,
-      ...options
+      ...options,
     };
-    
+
     this.ws = null;
     this.reconnectAttempts = 0;
     this.reconnectTimer = null;
@@ -1339,14 +1339,14 @@ export class FluxWebSocket {
     this.messageQueue = [];
     this.subscribers = new Map();
     this.isConnected = false;
-    
+
     this.connect();
   }
 
   connect() {
     try {
       this.ws = new WebSocket(this.url);
-      
+
       this.ws.onopen = () => {
         this.isConnected = true;
         this.reconnectAttempts = 0;
@@ -1354,7 +1354,7 @@ export class FluxWebSocket {
         this.flushMessageQueue();
         this.emit('connected');
       };
-      
+
       this.ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
@@ -1363,19 +1363,19 @@ export class FluxWebSocket {
           console.error('Error parsing WebSocket message:', error);
         }
       };
-      
+
       this.ws.onclose = () => {
         this.isConnected = false;
         this.stopHeartbeat();
         this.emit('disconnected');
         this.scheduleReconnect();
       };
-      
+
       this.ws.onerror = (error) => {
         console.error('WebSocket error:', error);
         this.emit('error', error);
       };
-      
+
     } catch (error) {
       console.error('Error creating WebSocket:', error);
       this.scheduleReconnect();
@@ -1384,7 +1384,7 @@ export class FluxWebSocket {
 
   send(type, data) {
     const message = { type, data, timestamp: Date.now() };
-    
+
     if (this.isConnected) {
       this.ws.send(JSON.stringify(message));
     } else {
@@ -1397,7 +1397,7 @@ export class FluxWebSocket {
       this.subscribers.set(type, new Set());
     }
     this.subscribers.get(type).add(callback);
-    
+
     return () => {
       const callbacks = this.subscribers.get(type);
       if (callbacks) {
@@ -1409,7 +1409,7 @@ export class FluxWebSocket {
   handleMessage(data) {
     const { type, data: messageData } = data;
     const callbacks = this.subscribers.get(type);
-    
+
     if (callbacks) {
       for (const callback of callbacks) {
         try {
@@ -1419,7 +1419,7 @@ export class FluxWebSocket {
         }
       }
     }
-    
+
     this.emit('message', data);
   }
 
@@ -1459,12 +1459,12 @@ export class FluxWebSocket {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
-    
+
     if (this.heartbeatTimer) {
       clearInterval(this.heartbeatTimer);
       this.heartbeatTimer = null;
     }
-    
+
     if (this.ws) {
       this.ws.close();
       this.ws = null;
@@ -1483,38 +1483,38 @@ export const FluxDevTools = {
   logStateChanges: true,
   logRenders: true,
   logRouteChanges: true,
-  
+
   trackStateChange(component, stateName, oldValue, newValue) {
     if (this.logStateChanges) {
       console.log(`[Flux] State change in ${component.constructor.name}:`, {
         state: stateName,
         oldValue,
-        newValue
+        newValue,
       });
     }
   },
-  
+
   trackRender(component, renderTime) {
     if (this.logRenders) {
       console.log(`[Flux] Render ${component.constructor.name}: ${renderTime}ms`);
     }
   },
-  
+
   trackRouteChange(from, to) {
     if (this.logRouteChanges) {
       console.log(`[Flux] Route change: ${from} -> ${to}`);
     }
-  }
+  },
 };
 
 // Performance monitoring
 export const FluxProfiler = {
   measurements: new Map(),
-  
+
   start(label) {
     this.measurements.set(label, performance.now());
   },
-  
+
   end(label) {
     const startTime = this.measurements.get(label);
     if (startTime) {
@@ -1524,16 +1524,16 @@ export const FluxProfiler = {
     }
     return 0;
   },
-  
+
   measure(label, fn) {
     this.start(label);
     const result = fn();
     const duration = this.end(label);
-    
+
     console.log(`[Flux Profiler] ${label}: ${duration.toFixed(2)}ms`);
-    
+
     return result;
-  }
+  },
 };
 
 // Export the mount function

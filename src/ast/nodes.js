@@ -54,35 +54,35 @@ export class ComponentDeclaration extends ASTNode {
     this.computed = [];
     this.render = null;
     this.lifecycle = [];
-    
+
     // Organize body items
     this.organizeBody();
   }
-  
+
   organizeBody() {
     for (const item of this.body) {
       switch (item.type) {
-        case 'StateDeclaration':
-          this.state.push(item);
-          break;
-        case 'PropDeclaration':
-          this.props.push(item);
-          break;
-        case 'MethodDeclaration':
-          this.methods.push(item);
-          break;
-        case 'EffectDeclaration':
-          this.effects.push(item);
-          break;
-        case 'ComputedDeclaration':
-          this.computed.push(item);
-          break;
-        case 'RenderDeclaration':
-          this.render = item;
-          break;
-        case 'LifecycleDeclaration':
-          this.lifecycle.push(item);
-          break;
+      case 'StateDeclaration':
+        this.state.push(item);
+        break;
+      case 'PropDeclaration':
+        this.props.push(item);
+        break;
+      case 'MethodDeclaration':
+        this.methods.push(item);
+        break;
+      case 'EffectDeclaration':
+        this.effects.push(item);
+        break;
+      case 'ComputedDeclaration':
+        this.computed.push(item);
+        break;
+      case 'RenderDeclaration':
+        this.render = item;
+        break;
+      case 'LifecycleDeclaration':
+        this.lifecycle.push(item);
+        break;
       }
     }
   }
@@ -97,22 +97,22 @@ export class StoreDeclaration extends ASTNode {
     this.state = [];
     this.actions = [];
     this.computed = [];
-    
+
     this.organizeBody();
   }
-  
+
   organizeBody() {
     for (const item of this.body) {
       switch (item.type) {
-        case 'StateDeclaration':
-          this.state.push(item);
-          break;
-        case 'ActionDeclaration':
-          this.actions.push(item);
-          break;
-        case 'ComputedDeclaration':
-          this.computed.push(item);
-          break;
+      case 'StateDeclaration':
+        this.state.push(item);
+        break;
+      case 'ActionDeclaration':
+        this.actions.push(item);
+        break;
+      case 'ComputedDeclaration':
+        this.computed.push(item);
+        break;
       }
     }
   }
@@ -448,6 +448,33 @@ export class GuardDeclaration extends ASTNode {
   }
 }
 
+// Styles Declaration
+export class StylesDeclaration extends ASTNode {
+  constructor(componentName, rules, location) {
+    super('StylesDeclaration', location);
+    this.componentName = componentName;
+    this.rules = rules;
+  }
+}
+
+// CSS Rule
+export class CSSRule extends ASTNode {
+  constructor(selector, declarations, location) {
+    super('CSSRule', location);
+    this.selector = selector;
+    this.declarations = declarations;
+  }
+}
+
+// CSS Declaration
+export class CSSDeclaration extends ASTNode {
+  constructor(property, value, location) {
+    super('CSSDeclaration', location);
+    this.property = property;
+    this.value = value;
+  }
+}
+
 // Type annotations
 export class TypeAnnotation extends ASTNode {
   constructor(typeAnnotation, location) {
@@ -500,6 +527,6 @@ export class ArrowFunctionExpression extends ASTNode {
 export function createLocation(startLine, startColumn, endLine, endColumn) {
   return {
     start: { line: startLine, column: startColumn },
-    end: { line: endLine, column: endColumn }
+    end: { line: endLine, column: endColumn },
   };
 }

@@ -23,13 +23,13 @@ class StorageConfig {
 
       const storageOptions = this.getStorageOptions();
       this.storageManager = new StorageManager(storageOptions);
-      
+
       // Wait for initialization to complete
       await this.storageManager.initializeStorage();
-      
+
       this.initialized = true;
       console.log('✅ Storage configuration initialized successfully');
-      
+
       return this.storageManager;
     } catch (error) {
       console.error('❌ Failed to initialize storage configuration:', error);
@@ -43,23 +43,23 @@ class StorageConfig {
     const type = config.type || 'local';
 
     switch (type) {
-      case 'local':
-        return this.getLocalStorageOptions();
-      case 's3':
-        return this.getS3StorageOptions();
-      case 'gcs':
-        return this.getGCSStorageOptions();
-      case 'azure':
-        return this.getAzureStorageOptions();
-      default:
-        throw new Error(`Unsupported storage type: ${type}`);
+    case 'local':
+      return this.getLocalStorageOptions();
+    case 's3':
+      return this.getS3StorageOptions();
+    case 'gcs':
+      return this.getGCSStorageOptions();
+    case 'azure':
+      return this.getAzureStorageOptions();
+    default:
+      throw new Error(`Unsupported storage type: ${type}`);
     }
   }
 
   // Get local storage options
   getLocalStorageOptions() {
     const config = this.config.local;
-    
+
     return {
       basePath: config.basePath || 'storage',
       publicPath: config.publicPath || 'public',
@@ -67,18 +67,18 @@ class StorageConfig {
       tempPath: config.tempPath || 'temp',
       maxFileSize: config.maxFileSize || 10 * 1024 * 1024, // 10MB
       allowedTypes: config.allowedTypes || ['image/*', 'text/*', 'application/*'],
-      cache: true
+      cache: true,
     };
   }
 
   // Get S3 storage options
   getS3StorageOptions() {
     const config = this.config.s3;
-    
+
     if (!config.bucket) {
       throw new Error('S3 bucket is required for S3 storage');
     }
-    
+
     return {
       type: 's3',
       bucket: config.bucket,
@@ -88,18 +88,18 @@ class StorageConfig {
       endpoint: config.endpoint,
       maxFileSize: this.config.local?.maxFileSize || 100 * 1024 * 1024, // 100MB
       allowedTypes: this.config.local?.allowedTypes || ['image/*', 'text/*', 'application/*'],
-      cache: true
+      cache: true,
     };
   }
 
   // Get Google Cloud Storage options
   getGCSStorageOptions() {
     const config = this.config.gcs;
-    
+
     if (!config.bucket) {
       throw new Error('GCS bucket is required for Google Cloud Storage');
     }
-    
+
     return {
       type: 'gcs',
       bucket: config.bucket,
@@ -107,18 +107,18 @@ class StorageConfig {
       keyFilename: config.keyFilename,
       maxFileSize: this.config.local?.maxFileSize || 100 * 1024 * 1024, // 100MB
       allowedTypes: this.config.local?.allowedTypes || ['image/*', 'text/*', 'application/*'],
-      cache: true
+      cache: true,
     };
   }
 
   // Get Azure Blob Storage options
   getAzureStorageOptions() {
     const config = this.config.azure;
-    
+
     if (!config.accountName || !config.containerName) {
       throw new Error('Azure account name and container name are required for Azure Blob Storage');
     }
-    
+
     return {
       type: 'azure',
       accountName: config.accountName,
@@ -126,7 +126,7 @@ class StorageConfig {
       containerName: config.containerName,
       maxFileSize: this.config.local?.maxFileSize || 100 * 1024 * 1024, // 100MB
       allowedTypes: this.config.local?.allowedTypes || ['image/*', 'text/*', 'application/*'],
-      cache: true
+      cache: true,
     };
   }
 
@@ -135,7 +135,7 @@ class StorageConfig {
     if (!this.initialized) {
       await this.initialize();
     }
-    
+
     return await this.storageManager.getStorageStats();
   }
 
@@ -145,21 +145,21 @@ class StorageConfig {
       if (!this.initialized) {
         await this.initialize();
       }
-      
+
       const stats = await this.storageManager.getStorageStats();
-      
+
       return {
         status: 'healthy',
         timestamp: new Date(),
         stats,
-        message: 'Storage system is operating normally'
+        message: 'Storage system is operating normally',
       };
     } catch (error) {
       return {
         status: 'unhealthy',
         timestamp: new Date(),
         error: error.message,
-        message: 'Storage system is experiencing issues'
+        message: 'Storage system is experiencing issues',
       };
     }
   }
@@ -179,18 +179,18 @@ class StorageConfig {
 
     // Validate type-specific configuration
     switch (config.type) {
-      case 'local':
-        this.validateLocalConfig(config.local, errors);
-        break;
-      case 's3':
-        this.validateS3Config(config.s3, errors);
-        break;
-      case 'gcs':
-        this.validateGCSConfig(config.gcs, errors);
-        break;
-      case 'azure':
-        this.validateAzureConfig(config.azure, errors);
-        break;
+    case 'local':
+      this.validateLocalConfig(config.local, errors);
+      break;
+    case 's3':
+      this.validateS3Config(config.s3, errors);
+      break;
+    case 'gcs':
+      this.validateGCSConfig(config.gcs, errors);
+      break;
+    case 'azure':
+      this.validateAzureConfig(config.azure, errors);
+      break;
     }
 
     if (errors.length > 0) {
@@ -205,7 +205,7 @@ class StorageConfig {
     if (!config.basePath) {
       errors.push('Local storage base path is required');
     }
-    
+
     if (config.maxFileSize && config.maxFileSize <= 0) {
       errors.push('Local storage max file size must be greater than 0');
     }
@@ -216,11 +216,11 @@ class StorageConfig {
     if (!config.bucket) {
       errors.push('S3 bucket is required');
     }
-    
+
     if (!config.accessKeyId) {
       errors.push('S3 access key ID is required');
     }
-    
+
     if (!config.secretAccessKey) {
       errors.push('S3 secret access key is required');
     }
@@ -231,11 +231,11 @@ class StorageConfig {
     if (!config.bucket) {
       errors.push('GCS bucket is required');
     }
-    
+
     if (!config.projectId) {
       errors.push('GCS project ID is required');
     }
-    
+
     if (!config.keyFilename) {
       errors.push('GCS key filename is required');
     }
@@ -246,11 +246,11 @@ class StorageConfig {
     if (!config.accountName) {
       errors.push('Azure account name is required');
     }
-    
+
     if (!config.accountKey) {
       errors.push('Azure account key is required');
     }
-    
+
     if (!config.containerName) {
       errors.push('Azure container name is required');
     }
@@ -260,39 +260,39 @@ class StorageConfig {
   getEnvironmentVariables() {
     const config = this.config;
     const envVars = {
-      STORAGE_TYPE: config.type
+      STORAGE_TYPE: config.type,
     };
 
     switch (config.type) {
-      case 'local':
-        Object.assign(envVars, {
-          STORAGE_LOCAL_PATH: config.local?.basePath || 'storage',
-          STORAGE_MAX_FILE_SIZE: (config.local?.maxFileSize || 10 * 1024 * 1024).toString()
-        });
-        break;
-      case 's3':
-        Object.assign(envVars, {
-          S3_BUCKET: config.s3?.bucket,
-          S3_REGION: config.s3?.region || 'us-east-1',
-          S3_ACCESS_KEY_ID: config.s3?.accessKeyId,
-          S3_SECRET_ACCESS_KEY: config.s3?.secretAccessKey,
-          S3_ENDPOINT: config.s3?.endpoint
-        });
-        break;
-      case 'gcs':
-        Object.assign(envVars, {
-          GCS_BUCKET: config.gcs?.bucket,
-          GCS_PROJECT_ID: config.gcs?.projectId,
-          GCS_KEY_FILENAME: config.gcs?.keyFilename
-        });
-        break;
-      case 'azure':
-        Object.assign(envVars, {
-          AZURE_STORAGE_ACCOUNT: config.azure?.accountName,
-          AZURE_STORAGE_KEY: config.azure?.accountKey,
-          AZURE_STORAGE_CONTAINER: config.azure?.containerName
-        });
-        break;
+    case 'local':
+      Object.assign(envVars, {
+        STORAGE_LOCAL_PATH: config.local?.basePath || 'storage',
+        STORAGE_MAX_FILE_SIZE: (config.local?.maxFileSize || 10 * 1024 * 1024).toString(),
+      });
+      break;
+    case 's3':
+      Object.assign(envVars, {
+        S3_BUCKET: config.s3?.bucket,
+        S3_REGION: config.s3?.region || 'us-east-1',
+        S3_ACCESS_KEY_ID: config.s3?.accessKeyId,
+        S3_SECRET_ACCESS_KEY: config.s3?.secretAccessKey,
+        S3_ENDPOINT: config.s3?.endpoint,
+      });
+      break;
+    case 'gcs':
+      Object.assign(envVars, {
+        GCS_BUCKET: config.gcs?.bucket,
+        GCS_PROJECT_ID: config.gcs?.projectId,
+        GCS_KEY_FILENAME: config.gcs?.keyFilename,
+      });
+      break;
+    case 'azure':
+      Object.assign(envVars, {
+        AZURE_STORAGE_ACCOUNT: config.azure?.accountName,
+        AZURE_STORAGE_KEY: config.azure?.accountKey,
+        AZURE_STORAGE_CONTAINER: config.azure?.containerName,
+      });
+      break;
     }
 
     return envVars;
@@ -306,14 +306,14 @@ class StorageConfig {
       retention: {
         daily: 7,
         weekly: 4,
-        monthly: 12
+        monthly: 12,
       },
       compression: true,
       encryption: false,
       storage: {
         type: 'local',
-        path: './backups/storage'
-      }
+        path: './backups/storage',
+      },
     };
   }
 
@@ -324,15 +324,15 @@ class StorageConfig {
       schedule: '0 4 * * *', // Daily at 4 AM
       tempFiles: {
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        enabled: true
+        enabled: true,
       },
       orphanedFiles: {
         enabled: true,
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       },
       logRetention: {
-        maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
-      }
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      },
     };
   }
 
@@ -342,19 +342,19 @@ class StorageConfig {
       enabled: true,
       metrics: {
         enabled: true,
-        collectionInterval: 60000 // 1 minute
+        collectionInterval: 60000, // 1 minute
       },
       alerts: {
         enabled: true,
         diskUsage: {
           warning: 80, // 80%
-          critical: 90 // 90%
+          critical: 90, // 90%
         },
         fileCount: {
           warning: 10000,
-          critical: 50000
-        }
-      }
+          critical: 50000,
+        },
+      },
     };
   }
 
@@ -362,22 +362,22 @@ class StorageConfig {
   async testConnection() {
     try {
       this.validate();
-      
+
       if (!this.initialized) {
         await this.initialize();
       }
-      
+
       const stats = await this.storageManager.getStorageStats();
-      
+
       return {
         success: true,
         message: `Successfully connected to ${this.config.type} storage`,
-        stats
+        stats,
       };
     } catch (error) {
       return {
         success: false,
-        message: error.message
+        message: error.message,
       };
     }
   }
@@ -387,7 +387,7 @@ class StorageConfig {
     if (!this.initialized) {
       throw new Error('Storage not initialized. Call initialize() first.');
     }
-    
+
     return this.storageManager;
   }
 

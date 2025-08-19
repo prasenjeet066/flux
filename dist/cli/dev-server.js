@@ -56,6 +56,7 @@ var FluxLexer = class _FluxLexer {
     TRY: "TRY",
     CATCH: "CATCH",
     FINALLY: "FINALLY",
+    ON: "ON",
     // Operators
     ASSIGN: "ASSIGN",
     PLUS_ASSIGN: "PLUS_ASSIGN",
@@ -91,6 +92,8 @@ var FluxLexer = class _FluxLexer {
     JSX_CLOSE: "JSX_CLOSE",
     JSX_SELF_CLOSE: "JSX_SELF_CLOSE",
     JSX_TEXT: "JSX_TEXT",
+    // Arrow function
+    ARROW: "ARROW",
     // Decorators
     AT: "AT",
     // Special
@@ -115,6 +118,7 @@ var FluxLexer = class _FluxLexer {
     "use": "USE",
     "import": "IMPORT",
     "export": "EXPORT",
+    "on": "ON",
     "async": "ASYNC",
     "await": "AWAIT",
     "if": "IF",
@@ -209,9 +213,13 @@ var FluxLexer = class _FluxLexer {
         );
         break;
       case "=":
-        this.addToken(
-          this.match("=") ? _FluxLexer.TOKEN_TYPES.EQUALS : _FluxLexer.TOKEN_TYPES.ASSIGN
-        );
+        if (this.match("=")) {
+          this.addToken(_FluxLexer.TOKEN_TYPES.EQUALS);
+        } else if (this.match(">")) {
+          this.addToken(_FluxLexer.TOKEN_TYPES.ARROW);
+        } else {
+          this.addToken(_FluxLexer.TOKEN_TYPES.ASSIGN);
+        }
         break;
       case "<":
         if (this.peek() === "/") {
@@ -729,6 +737,13 @@ var TSBooleanKeyword = class extends ASTNode {
     super("TSBooleanKeyword", location);
   }
 };
+var ArrowFunctionExpression = class extends ASTNode {
+  constructor(params, body, location) {
+    super("ArrowFunctionExpression", location);
+    this.params = params;
+    this.body = body;
+  }
+};
 function createLocation(startLine, startColumn, endLine, endColumn) {
   return {
     start: { line: startLine, column: startColumn },
@@ -772,6 +787,9 @@ var FluxParser = class _FluxParser {
       const decorators = [];
       while (this.check("AT")) {
         decorators.push(this.decorator());
+        while (this.check("NEWLINE")) {
+          this.advance();
+        }
       }
       if (this.match("COMPONENT")) {
         return this.componentDeclaration(decorators);
@@ -825,7 +843,12 @@ var FluxParser = class _FluxParser {
   }
   decorator() {
     this.consume("AT", 'Expected "@"');
-    const name = this.consume("IDENTIFIER", "Expected decorator name");
+    let name;
+    if (this.check("IDENTIFIER") || this.check("ROUTE") || this.check("GUARD") || this.check("COMPONENT") || this.check("STORE")) {
+      name = this.advance();
+    } else {
+      throw new Error(`Expected decorator name. Got ${this.peek().type} "${this.peek().lexeme}" at line ${this.peek().line}`);
+    }
     let args = [];
     if (this.match("LEFT_PAREN")) {
       args = this.argumentList();
@@ -863,6 +886,13 @@ var FluxParser = class _FluxParser {
     }
     if (this.match("PROP")) {
       return this.propDeclaration();
+    }
+    if (this.match("ASYNC")) {
+      if (this.match("METHOD")) {
+        return this.methodDeclaration(true);
+      } else {
+        throw new Error('Expected "method" after "async"');
+      }
     }
     if (this.match("METHOD")) {
       return this.methodDeclaration();
@@ -915,8 +945,10 @@ var FluxParser = class _FluxParser {
       this.getCurrentLocation()
     );
   }
-  methodDeclaration() {
-    const isAsync = this.match("ASYNC");
+  methodDeclaration(isAsync = false) {
+    if (!isAsync) {
+      isAsync = this.match("ASYNC");
+    }
     const name = this.consume("IDENTIFIER", "Expected method name");
     this.consume("LEFT_PAREN", 'Expected "("');
     const parameters = this.parameterList();
@@ -931,7 +963,7 @@ var FluxParser = class _FluxParser {
     );
   }
   effectDeclaration() {
-    let dependencies = [];
+    const dependencies = [];
     if (this.match("ON")) {
       dependencies.push(this.expression());
       while (this.match("COMMA")) {
@@ -1144,6 +1176,26 @@ var FluxParser = class _FluxParser {
     return this.assignment();
   }
   assignment() {
+    if (this.check("LEFT_PAREN")) {
+      const checkpoint = this.current;
+      try {
+        this.advance();
+        const params = [];
+        if (!this.check("RIGHT_PAREN")) {
+          do {
+            params.push(this.consume("IDENTIFIER", "Expected parameter name"));
+          } while (this.match("COMMA"));
+        }
+        this.consume("RIGHT_PAREN", 'Expected ")" after parameters');
+        if (this.check("ARROW")) {
+          return this.arrowFunction(params);
+        } else {
+          this.current = checkpoint;
+        }
+      } catch (error) {
+        this.current = checkpoint;
+      }
+    }
     const expr = this.ternary();
     if (this.match("ASSIGN", "PLUS_ASSIGN", "MINUS_ASSIGN")) {
       const operator = this.previous();
@@ -1158,7 +1210,42 @@ var FluxParser = class _FluxParser {
         this.getCurrentLocation()
       );
     }
+    if (this.check("ARROW")) {
+      return this.arrowFunction(expr);
+    }
     return expr;
+  }
+  arrowFunction(params) {
+    this.consume("ARROW", 'Expected "=>"');
+    let paramList = [];
+    if (Array.isArray(params)) {
+      paramList = params.map((p) => new Identifier(p.lexeme));
+    } else if (params.type === "Identifier") {
+      paramList = [params];
+    } else {
+      throw new Error("Invalid arrow function parameters");
+    }
+    let body;
+    if (this.check("LEFT_BRACE")) {
+      body = this.blockStatement();
+    } else if (this.check("LEFT_PAREN")) {
+      this.advance();
+      while (this.check("NEWLINE")) {
+        this.advance();
+      }
+      body = this.expression();
+      while (this.check("NEWLINE")) {
+        this.advance();
+      }
+      this.consume("RIGHT_PAREN", 'Expected ")" after arrow function body');
+    } else {
+      body = this.assignment();
+    }
+    return new ArrowFunctionExpression(
+      paramList,
+      body,
+      this.getCurrentLocation()
+    );
   }
   ternary() {
     let expr = this.logicalOr();
@@ -1260,7 +1347,7 @@ var FluxParser = class _FluxParser {
     return expr;
   }
   unary() {
-    if (this.match("LOGICAL_NOT", "MINUS", "PLUS")) {
+    if (this.match("LOGICAL_NOT", "MINUS", "PLUS", "AWAIT")) {
       const operator = this.previous();
       const right = this.unary();
       return new UnaryExpression(
@@ -1390,12 +1477,16 @@ var FluxParser = class _FluxParser {
         this.consume("RIGHT_BRACE", 'Expected "}" after JSX expression');
         children.push(new JSXExpressionContainer(expr));
       } else {
-        let text = "";
-        while (!this.check("JSX_OPEN") && !this.check("JSX_CLOSE") && !this.check("LEFT_BRACE") && !this.isAtEnd()) {
-          text += this.advance().lexeme;
-        }
-        if (text.trim()) {
-          children.push(new JSXText(text.trim()));
+        if (this.check("NEWLINE")) {
+          this.advance();
+        } else {
+          let text = "";
+          while (!this.check("JSX_OPEN") && !this.check("JSX_CLOSE") && !this.check("LEFT_BRACE") && !this.check("NEWLINE") && !this.isAtEnd()) {
+            text += this.advance().lexeme;
+          }
+          if (text.trim()) {
+            children.push(new JSXText(text.trim()));
+          }
         }
       }
     }
@@ -1417,7 +1508,7 @@ var FluxParser = class _FluxParser {
     if (this.check("AT")) {
       this.advance();
       const eventName = this.consume("IDENTIFIER", "Expected event name after @");
-      name = new Identifier("@" + eventName.lexeme);
+      name = new Identifier(`@${eventName.lexeme}`);
     } else {
       const attrName = this.consume("IDENTIFIER", "Expected attribute name");
       name = new Identifier(attrName.lexeme);
@@ -1574,8 +1665,8 @@ var FluxCodeGenerator = class {
   generate(ast) {
     this.output = [];
     this.indent = 0;
-    this.addLine("import { FluxRuntime, Component, Store, createReactiveState, createEffect, createComputed } from '@flux/runtime';");
-    this.addLine("import { createElement, Fragment } from '@flux/jsx';");
+    this.addLine("import { FluxRuntime, Component, Store, createReactiveState, createEffect, createComputed, createComponent, createStore } from '../runtime/index.js';");
+    this.addLine("import { createElement, Fragment } from '../runtime/index.js';");
     this.addLine("");
     this.visit(ast);
     return this.output.join("\n");
@@ -1610,12 +1701,33 @@ var FluxCodeGenerator = class {
   visitComponentDeclaration(node) {
     const componentName = node.name.name;
     this.componentCount++;
+    for (const decorator of node.decorators) {
+      let decoratorStr = `@${decorator.name.name}`;
+      if (decorator.arguments && decorator.arguments.length > 0) {
+        decoratorStr += "(";
+        for (let i = 0; i < decorator.arguments.length; i++) {
+          decoratorStr += this.stringifyValue(decorator.arguments[i]);
+          if (i < decorator.arguments.length - 1) decoratorStr += ", ";
+        }
+        decoratorStr += ")";
+      }
+      this.addLine(`// ${decoratorStr}`);
+    }
     this.addLine(`class ${componentName} extends Component {`);
     this.indent++;
     this.addLine("constructor(props = {}) {");
     this.indent++;
     this.addLine("super(props);");
     this.addLine("");
+    if (node.props.length > 0) {
+      this.addLine("// Initialize props");
+      for (const propDecl of node.props) {
+        const name = propDecl.name.name;
+        const defaultValue = propDecl.defaultValue ? this.visit(propDecl.defaultValue) : "undefined";
+        this.addLine(`this.${name} = props.${name} !== undefined ? props.${name} : ${defaultValue};`);
+      }
+      this.addLine("");
+    }
     if (node.state.length > 0) {
       this.addLine("// Initialize state");
       for (const stateDecl of node.state) {
@@ -1928,11 +2040,18 @@ var FluxCodeGenerator = class {
       this.add(", {");
       for (let i = 0; i < node.openingElement.attributes.length; i++) {
         const attr = node.openingElement.attributes[i];
-        this.add(`${attr.name.name}: `);
-        if (attr.value.type === "JSXExpressionContainer") {
+        let attrName = attr.name && attr.name.name ? attr.name.name : "unknown";
+        if (attrName.startsWith("@")) {
+          const eventName = attrName.substring(1);
+          attrName = `on${eventName.charAt(0).toUpperCase()}${eventName.slice(1)}`;
+        }
+        this.add(`${attrName}: `);
+        if (attr.value && attr.value.type === "JSXExpressionContainer") {
           this.visit(attr.value.expression);
-        } else {
+        } else if (attr.value) {
           this.visit(attr.value);
+        } else {
+          this.add("true");
         }
         if (i < node.openingElement.attributes.length - 1) {
           this.add(", ");
@@ -1962,6 +2081,47 @@ var FluxCodeGenerator = class {
   visitJSXText(node) {
     this.add(JSON.stringify(node.value));
   }
+  visitArrowFunctionExpression(node) {
+    if (node.params.length === 1 && node.params[0].type === "Identifier") {
+      this.visit(node.params[0]);
+    } else {
+      this.add("(");
+      for (let i = 0; i < node.params.length; i++) {
+        this.visit(node.params[i]);
+        if (i < node.params.length - 1) {
+          this.add(", ");
+        }
+      }
+      this.add(")");
+    }
+    this.add(" => ");
+    if (node.body.type === "BlockStatement") {
+      this.visit(node.body);
+    } else {
+      this.visit(node.body);
+    }
+  }
+  visitFunctionExpression(node) {
+    this.add("function");
+    if (node.id) {
+      this.add(" ");
+      this.visit(node.id);
+    }
+    this.add("(");
+    for (let i = 0; i < node.params.length; i++) {
+      this.visit(node.params[i]);
+      if (i < node.params.length - 1) {
+        this.add(", ");
+      }
+    }
+    this.add(") ");
+    this.visit(node.body);
+  }
+  visitLogicalExpression(node) {
+    this.visit(node.left);
+    this.add(` ${node.operator} `);
+    this.visit(node.right);
+  }
   // Utility methods
   isInRenderContext() {
     return true;
@@ -1973,10 +2133,30 @@ var FluxCodeGenerator = class {
     this.output.push(text);
   }
   addLine(text = "") {
-    this.output.push(text + "\n");
+    this.output.push(`${text}
+`);
   }
   getIndent() {
     return "  ".repeat(this.indent);
+  }
+  stringifyValue(node) {
+    if (node.type === "Literal") {
+      if (typeof node.value === "string") {
+        return `"${node.value}"`;
+      }
+      return String(node.value);
+    }
+    if (node.type === "ObjectExpression") {
+      let result = "{ ";
+      for (let i = 0; i < node.properties.length; i++) {
+        const prop = node.properties[i];
+        result += `${prop.key.name || prop.key.value}: ${this.stringifyValue(prop.value)}`;
+        if (i < node.properties.length - 1) result += ", ";
+      }
+      result += " }";
+      return result;
+    }
+    return "unknown";
   }
 };
 
@@ -2015,8 +2195,8 @@ var FluxCompiler = class {
     this.warnings = [];
     this.compilationCache = /* @__PURE__ */ new Map();
     this.dependencyGraph = /* @__PURE__ */ new Map();
-    this.optimizer = new FluxOptimizer(this.options);
-    this.bundler = new FluxBundler(this.options);
+    this.optimizer = this.createOptimizer();
+    this.bundler = this.createBundler();
   }
   async compileFile(filePath) {
     try {
@@ -2059,7 +2239,7 @@ var FluxCompiler = class {
         source,
         ast,
         output,
-        sourceMap: generator.sourceMap,
+        sourceMap: generator.sourceMap || null,
         filePath
       };
     } catch (error) {
@@ -2170,99 +2350,19 @@ var FluxCompiler = class {
       await fs.writeFile(outputPath + ".map", JSON.stringify(result.sourceMap));
     }
   }
-};
-var FluxOptimizer = class {
-  constructor(options) {
-    this.options = options;
-    this.optimizations = /* @__PURE__ */ new Map();
-    this.analysis = /* @__PURE__ */ new Map();
-  }
-  optimize(ast, context) {
-    if (!this.options.optimizations) return ast;
-    let optimizedAst = ast;
-    optimizedAst = this.constantFolding(optimizedAst);
-    optimizedAst = this.deadCodeElimination(optimizedAst);
-    optimizedAst = this.inlineExpansion(optimizedAst);
-    optimizedAst = this.hoisting(optimizedAst);
-    return optimizedAst;
-  }
-  constantFolding(ast) {
-    return ast;
-  }
-  deadCodeElimination(ast) {
-    return ast;
-  }
-  inlineExpansion(ast) {
-    return ast;
-  }
-  hoisting(ast) {
-    return ast;
-  }
-  analyze(ast) {
-    const analysis = {
-      complexity: this.calculateComplexity(ast),
-      dependencies: this.findDependencies(ast),
-      performance: this.analyzePerformance(ast)
-    };
-    this.analysis.set(ast, analysis);
-    return analysis;
-  }
-  calculateComplexity(ast) {
-    return 1;
-  }
-  findDependencies(ast) {
-    return [];
-  }
-  analyzePerformance(ast) {
-    return {};
-  }
-};
-var FluxBundler = class {
-  constructor(options) {
-    this.options = options;
-    this.bundles = /* @__PURE__ */ new Map();
-    this.chunks = /* @__PURE__ */ new Map();
-  }
-  createBundle(entryPoints, dependencies) {
-    if (!this.options.codeSplitting) {
-      return this.createSingleBundle(entryPoints, dependencies);
-    }
-    return this.createSplitBundles(entryPoints, dependencies);
-  }
-  createSingleBundle(entryPoints, dependencies) {
+  createOptimizer() {
     return {
-      type: "single",
-      code: this.mergeCode(entryPoints, dependencies),
-      sourceMap: this.mergeSourceMaps(entryPoints, dependencies)
+      optimize: (ast) => ast,
+      // Placeholder optimization
+      getOptimizations: () => []
     };
   }
-  createSplitBundles(entryPoints, dependencies) {
-    const bundles = [];
-    for (const entryPoint of entryPoints) {
-      const bundle = this.createBundleForEntry(entryPoint, dependencies);
-      bundles.push(bundle);
-    }
-    return bundles;
-  }
-  createBundleForEntry(entryPoint, dependencies) {
+  createBundler() {
     return {
-      type: "entry",
-      entry: entryPoint,
-      code: this.generateEntryCode(entryPoint, dependencies),
-      dependencies: this.getEntryDependencies(entryPoint, dependencies)
+      bundle: (files) => ({ code: "", map: null }),
+      // Placeholder bundling
+      getBundleInfo: () => ({ size: 0, files: [] })
     };
-  }
-  mergeCode(entryPoints, dependencies) {
-    return entryPoints.map((ep) => ep.code).join("\n");
-  }
-  mergeSourceMaps(entryPoints, dependencies) {
-    return {};
-  }
-  generateEntryCode(entryPoint, dependencies) {
-    return entryPoint.code;
-  }
-  getEntryDependencies(entryPoint, dependencies) {
-    return dependencies.filter((dep) => dep.entryPoint === entryPoint);
   }
 };
 
@@ -2927,6 +3027,18 @@ var FluxRuntime = class {
       return instance;
     }
   }
+  static createComponent(componentClass, props = {}) {
+    return new componentClass(props);
+  }
+  static createStore(storeClass, initialState = {}) {
+    return new storeClass(initialState);
+  }
+  createComponent(componentClass, props = {}) {
+    return new componentClass(props);
+  }
+  createStore(storeClass, initialState = {}) {
+    return new storeClass(initialState);
+  }
 };
 var Fragment = Symbol("Fragment");
 var FluxCache = class {
@@ -3306,7 +3418,7 @@ var StorageManager = class {
     const k = 1024;
     const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
   }
   // Storage statistics
   async getStorageStats() {
@@ -3593,7 +3705,7 @@ async function devServer(options = {}) {
       console.log(chalk.cyan(`[root] ${root}`));
       console.log(chalk.blue(`[storage] ${configManager.get("storage.type", "local")}`));
       console.log(chalk.yellow(`[hmr] ${hot ? "enabled" : "disabled"}`));
-      console.log(chalk.gray(`Press Ctrl+C to stop`));
+      console.log(chalk.gray("Press Ctrl+C to stop"));
     });
     await setupFileWatching(root, compiler, connections);
     return server;

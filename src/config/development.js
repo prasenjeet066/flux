@@ -3,7 +3,7 @@ export default {
   // Override development-specific settings
   app: {
     debug: true,
-    environment: 'development'
+    environment: 'development',
   },
 
   server: {
@@ -11,8 +11,8 @@ export default {
     host: 'localhost',
     cors: {
       origin: ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000'],
-      credentials: true
-    }
+      credentials: true,
+    },
   },
 
   database: {
@@ -24,22 +24,22 @@ export default {
     ssl: false,
     pool: {
       min: 1,
-      max: 5
-    }
+      max: 5,
+    },
   },
 
   redis: {
     enabled: false, // Disable Redis in development for simplicity
     host: 'localhost',
-    port: 6379
+    port: 6379,
   },
 
   storage: {
     type: 'local',
     local: {
       basePath: 'storage',
-      maxFileSize: 50 * 1024 * 1024 // 50MB for development
-    }
+      maxFileSize: 50 * 1024 * 1024, // 50MB for development
+    },
   },
 
   logging: {
@@ -48,37 +48,37 @@ export default {
     transports: {
       console: {
         enabled: true,
-        colorize: true
+        colorize: true,
       },
       file: {
-        enabled: false
-      }
-    }
+        enabled: false,
+      },
+    },
   },
 
   monitoring: {
     enabled: false,
     metrics: {
-      enabled: false
-    }
+      enabled: false,
+    },
   },
 
   queue: {
-    enabled: false
+    enabled: false,
   },
 
   websocket: {
     enabled: true,
     cors: {
-      origin: ['http://localhost:3000', 'http://localhost:3001']
-    }
+      origin: ['http://localhost:3000', 'http://localhost:3001'],
+    },
   },
 
   api: {
     documentation: {
       enabled: true,
-      path: '/docs'
-    }
+      path: '/docs',
+    },
   },
 
   frontend: {
@@ -88,20 +88,20 @@ export default {
       proxy: {
         '/api': {
           target: 'http://localhost:3000',
-          changeOrigin: true
+          changeOrigin: true,
         },
         '/storage': {
           target: 'http://localhost:3000',
-          changeOrigin: true
-        }
-      }
-    }
+          changeOrigin: true,
+        },
+      },
+    },
   },
 
   development: {
     hotReload: true,
     debug: true,
     sourceMaps: true,
-    watchMode: true
-  }
+    watchMode: true,
+  },
 };

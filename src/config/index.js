@@ -15,14 +15,14 @@ class ConfigManager {
       secretsFile: options.secretsFile || '.env',
       validateOnLoad: options.validateOnLoad !== false,
       cache: options.cache !== false,
-      ...options
+      ...options,
     };
-    
+
     this.config = new Map();
     this.secrets = new Map();
     this.loaded = false;
     this.watchers = new Map();
-    
+
     this.loadConfiguration();
   }
 
@@ -30,24 +30,24 @@ class ConfigManager {
     try {
       // Load environment variables
       await this.loadEnvironmentVariables();
-      
+
       // Load main configuration
       await this.loadMainConfig();
-      
+
       // Load environment-specific configuration
       await this.loadEnvironmentConfig();
-      
+
       // Load secrets
       await this.loadSecrets();
-      
+
       // Validate configuration
       if (this.options.validateOnLoad) {
         await this.validateConfiguration();
       }
-      
+
       this.loaded = true;
       console.log('✅ Configuration loaded successfully');
-      
+
     } catch (error) {
       console.error('❌ Failed to load configuration:', error);
       throw error;
@@ -61,7 +61,7 @@ class ConfigManager {
       try {
         const envContent = await fs.readFile(envPath, 'utf-8');
         const envVars = this.parseEnvFile(envContent);
-        
+
         for (const [key, value] of Object.entries(envVars)) {
           process.env[key] = value;
         }
@@ -74,7 +74,7 @@ class ConfigManager {
   parseEnvFile(content) {
     const envVars = {};
     const lines = content.split('\n');
-    
+
     for (const line of lines) {
       const trimmed = line.trim();
       if (trimmed && !trimmed.startsWith('#')) {
@@ -84,18 +84,18 @@ class ConfigManager {
         }
       }
     }
-    
+
     return envVars;
   }
 
   async loadMainConfig() {
     const configPath = path.resolve(this.options.configDir, this.options.configFile);
-    
+
     if (await fs.pathExists(configPath)) {
       try {
         const config = await import(configPath);
         const configData = config.default || config;
-        
+
         // Merge with environment variables
         this.config.set('main', this.interpolateEnvVars(configData));
       } catch (error) {
@@ -109,16 +109,16 @@ class ConfigManager {
 
   async loadEnvironmentConfig() {
     const envConfigPath = path.resolve(this.options.configDir, `${this.options.environment}.js`);
-    
+
     if (await fs.pathExists(envConfigPath)) {
       try {
         const config = await import(envConfigPath);
         const configData = config.default || config;
-        
+
         // Merge with main config
         const mainConfig = this.config.get('main') || {};
         const envConfig = this.interpolateEnvVars(configData);
-        
+
         this.config.set('environment', this.mergeConfigs(mainConfig, envConfig));
       } catch (error) {
         console.warn(`Warning: Could not load ${this.options.environment} config:`, error.message);
@@ -131,12 +131,12 @@ class ConfigManager {
 
   async loadSecrets() {
     const secretsPath = path.resolve(this.options.configDir, 'secrets.js');
-    
+
     if (await fs.pathExists(secretsPath)) {
       try {
         const secrets = await import(secretsPath);
         const secretsData = secrets.default || secrets;
-        
+
         this.secrets = new Map(Object.entries(secretsData));
       } catch (error) {
         console.warn('Warning: Could not load secrets:', error.message);
@@ -150,11 +150,11 @@ class ConfigManager {
         return process.env[key] || match;
       });
     }
-    
+
     if (Array.isArray(config)) {
       return config.map(item => this.interpolateEnvVars(item));
     }
-    
+
     if (typeof config === 'object' && config !== null) {
       const result = {};
       for (const [key, value] of Object.entries(config)) {
@@ -162,13 +162,13 @@ class ConfigManager {
       }
       return result;
     }
-    
+
     return config;
   }
 
   mergeConfigs(base, override) {
     const result = { ...base };
-    
+
     for (const [key, value] of Object.entries(override)) {
       if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
         result[key] = this.mergeConfigs(result[key] || {}, value);
@@ -176,13 +176,13 @@ class ConfigManager {
         result[key] = value;
       }
     }
-    
+
     return result;
   }
 
   async validateConfiguration() {
     const config = this.config.get('environment');
-    
+
     // Validate required fields
     const required = ['app', 'server', 'database'];
     for (const field of required) {
@@ -190,12 +190,12 @@ class ConfigManager {
         throw new Error(`Missing required configuration: ${field}`);
       }
     }
-    
+
     // Validate specific configurations
     await this.validateAppConfig(config.app);
     await this.validateServerConfig(config.server);
     await this.validateDatabaseConfig(config.database);
-    
+
     console.log('✅ Configuration validation passed');
   }
 
@@ -203,7 +203,7 @@ class ConfigManager {
     if (!appConfig.name) {
       throw new Error('App name is required');
     }
-    
+
     if (!appConfig.version) {
       throw new Error('App version is required');
     }
@@ -213,7 +213,7 @@ class ConfigManager {
     if (!serverConfig.port) {
       throw new Error('Server port is required');
     }
-    
+
     if (serverConfig.port < 1 || serverConfig.port > 65535) {
       throw new Error('Server port must be between 1 and 65535');
     }
@@ -223,11 +223,11 @@ class ConfigManager {
     if (!dbConfig.host) {
       throw new Error('Database host is required');
     }
-    
+
     if (!dbConfig.port) {
       throw new Error('Database port is required');
     }
-    
+
     if (!dbConfig.database) {
       throw new Error('Database name is required');
     }
@@ -242,7 +242,7 @@ class ConfigManager {
   getNestedValue(obj, path, defaultValue) {
     const keys = path.split('.');
     let current = obj;
-    
+
     for (const key of keys) {
       if (current && typeof current === 'object' && key in current) {
         current = current[key];
@@ -250,7 +250,7 @@ class ConfigManager {
         return defaultValue;
       }
     }
-    
+
     return current !== undefined ? current : defaultValue;
   }
 
@@ -263,14 +263,14 @@ class ConfigManager {
     const keys = path.split('.');
     const lastKey = keys.pop();
     let current = obj;
-    
+
     for (const key of keys) {
       if (!(key in current) || typeof current[key] !== 'object') {
         current[key] = {};
       }
       current = current[key];
     }
-    
+
     current[lastKey] = value;
   }
 
@@ -289,7 +289,7 @@ class ConfigManager {
       this.watchers.set(key, new Set());
     }
     this.watchers.get(key).add(callback);
-    
+
     return () => {
       const watchers = this.watchers.get(key);
       if (watchers) {
@@ -337,17 +337,17 @@ class ConfigManager {
 
   getAllKeys(obj, prefix = '') {
     const keys = [];
-    
+
     for (const [key, value] of Object.entries(obj)) {
       const fullKey = prefix ? `${prefix}.${key}` : key;
-      
+
       if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
         keys.push(...this.getAllKeys(value, fullKey));
       } else {
         keys.push(fullKey);
       }
     }
-    
+
     return keys;
   }
 
@@ -355,16 +355,16 @@ class ConfigManager {
   search(query) {
     const config = this.config.get('environment');
     const results = [];
-    
+
     for (const key of this.getKeys()) {
       if (key.toLowerCase().includes(query.toLowerCase())) {
         results.push({
           key,
-          value: this.get(key)
+          value: this.get(key),
         });
       }
     }
-    
+
     return results;
   }
 
@@ -374,9 +374,9 @@ class ConfigManager {
     const diff = {
       added: {},
       modified: {},
-      removed: {}
+      removed: {},
     };
-    
+
     // Find added and modified
     for (const [key, value] of Object.entries(otherConfig)) {
       if (!(key in currentConfig)) {
@@ -384,18 +384,18 @@ class ConfigManager {
       } else if (JSON.stringify(currentConfig[key]) !== JSON.stringify(value)) {
         diff.modified[key] = {
           old: currentConfig[key],
-          new: value
+          new: value,
         };
       }
     }
-    
+
     // Find removed
     for (const key of Object.keys(currentConfig)) {
       if (!(key in otherConfig)) {
         diff.removed[key] = currentConfig[key];
       }
     }
-    
+
     return diff;
   }
 }

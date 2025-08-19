@@ -379,11 +379,10 @@ dist/
   console.log("Created: .gitignore");
   console.log(`
 [ok] Project created successfully in ${projectDir}`);
-  console.log(`
-Next steps:`);
+  console.log("\nNext steps:");
   console.log(`  cd ${projectName}`);
-  console.log(`  npm install`);
-  console.log(`  flux dev`);
+  console.log("  npm install");
+  console.log("  flux dev");
 }
 export {
   createProject

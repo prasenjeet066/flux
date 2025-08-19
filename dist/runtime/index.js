@@ -279,7 +279,7 @@ var Computed = class {
     return {
       hitCount: this.hitCount,
       missCount: this.missCount,
-      hitRate: hitRate.toFixed(2) + "%",
+      hitRate: `${hitRate.toFixed(2)}%`,
       isCached: this._cached,
       lastCacheTime: this.lastCacheTime,
       cacheAge: Date.now() - this.lastCacheTime
@@ -777,6 +777,18 @@ var FluxRuntime = class {
       return instance;
     }
   }
+  static createComponent(componentClass, props = {}) {
+    return new componentClass(props);
+  }
+  static createStore(storeClass, initialState = {}) {
+    return new storeClass(initialState);
+  }
+  createComponent(componentClass, props = {}) {
+    return new componentClass(props);
+  }
+  createStore(storeClass, initialState = {}) {
+    return new storeClass(initialState);
+  }
 };
 function createReactiveState(initialValue) {
   return new ReactiveState(initialValue);
@@ -790,6 +802,12 @@ function createEffect(fn, dependencies) {
 }
 function createComputed(fn) {
   return new Computed(fn);
+}
+function createComponent(componentClass, props = {}) {
+  return new componentClass(props);
+}
+function createStore(storeClass, initialState = {}) {
+  return new storeClass(initialState);
 }
 function createElement(type, props, ...children) {
   return FluxRuntime.virtualDOM.createElement(type, props, ...children);
@@ -1109,10 +1127,12 @@ export {
   FluxWebSocket,
   Fragment,
   Store,
+  createComponent,
   createComputed,
   createEffect,
   createElement,
   createReactiveState,
+  createStore,
   mount,
   setCurrentComponent
 };

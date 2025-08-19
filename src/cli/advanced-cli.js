@@ -125,29 +125,29 @@ class AdvancedCLI {
 
   async createProject(projectName, options) {
     console.log(chalk.blue(`[new] Creating Flux project: ${projectName}`));
-    
+
     try {
       const projectDir = path.resolve(projectName);
-      
+
       if (await fs.pathExists(projectDir)) {
         console.error(chalk.red(`Directory ${projectName} already exists`));
         process.exit(1);
       }
 
       await fs.ensureDir(projectDir);
-      
+
       // Create project structure based on template
       await this.createProjectStructure(projectDir, options.template, options);
-      
+
       // Install dependencies
       await this.installDependencies(projectDir, options);
-      
+
       console.log(chalk.green(`[ok] Project ${projectName} created`));
       console.log(chalk.cyan(`[dir] ${projectDir}`));
-      console.log(chalk.yellow(`[next]`));
+      console.log(chalk.yellow('[next]'));
       console.log(chalk.yellow(`   cd ${projectName}`));
-      console.log(chalk.yellow(`   npm run dev`));
-      
+      console.log(chalk.yellow('   npm run dev'));
+
     } catch (error) {
       console.error(chalk.red('Error creating project:'), error);
       process.exit(1);
@@ -159,7 +159,7 @@ class AdvancedCLI {
       basic: this.createBasicTemplate.bind(this),
       fullstack: this.createFullstackTemplate.bind(this),
       api: this.createAPITemplate.bind(this),
-      spa: this.createSPATemplate.bind(this)
+      spa: this.createSPATemplate.bind(this),
     };
 
     const templateFn = templates[template] || templates.basic;
@@ -177,7 +177,7 @@ class AdvancedCLI {
       'src/pages/home.flux': this.generateHomePage(),
       'src/styles/global.css': this.generateGlobalCSS(),
       '.gitignore': this.generateGitignore(),
-      '.flux/index.html': this.generateIndexHTML()
+      '.flux/index.html': this.generateIndexHTML(),
     };
 
     for (const [filename, content] of Object.entries(files)) {
@@ -190,7 +190,7 @@ class AdvancedCLI {
   async createFullstackTemplate(projectDir, options) {
     // Create basic structure first
     await this.createBasicTemplate(projectDir, options);
-    
+
     // Add fullstack-specific files
     const fullstackFiles = {
       'src/server/index.js': this.generateServerFile(),
@@ -198,7 +198,7 @@ class AdvancedCLI {
       'src/api/routes.js': this.generateAPIRoutes(),
       'src/middleware/auth.js': this.generateAuthMiddleware(),
       'docker-compose.yml': this.generateDockerCompose(),
-      'src/config/database.js': this.generateDatabaseConfig()
+      'src/config/database.js': this.generateDatabaseConfig(),
     };
 
     for (const [filename, content] of Object.entries(fullstackFiles)) {
@@ -219,7 +219,7 @@ class AdvancedCLI {
       'src/config/index.js': this.generateAPIConfig(),
       'tests/api.test.js': this.generateAPITests(),
       '.env.example': this.generateEnvExample(),
-      'README.md': this.generateAPIREADME()
+      'README.md': this.generateAPIREADME(),
     };
 
     for (const [filename, content] of Object.entries(apiFiles)) {
@@ -232,7 +232,7 @@ class AdvancedCLI {
   async createSPATemplate(projectDir, options) {
     // Create basic structure first
     await this.createBasicTemplate(projectDir, options);
-    
+
     // Add SPA-specific files
     const spaFiles = {
       'src/router/index.js': this.generateSPARouter(),
@@ -241,7 +241,7 @@ class AdvancedCLI {
       'src/components/Layout.flux': this.generateSPALayout(),
       'src/pages/about.flux': this.generateAboutPage(),
       'src/pages/contact.flux': this.generateContactPage(),
-      'src/styles/components.css': this.generateComponentCSS()
+      'src/styles/components.css': this.generateComponentCSS(),
     };
 
     for (const [filename, content] of Object.entries(spaFiles)) {
@@ -253,13 +253,13 @@ class AdvancedCLI {
 
   async installDependencies(projectDir, options) {
     console.log(chalk.blue('[deps] Installing dependencies...'));
-    
+
     const packageManager = this.detectPackageManager();
     const installCmd = packageManager === 'npm' ? 'npm install' : 'yarn install';
-    
+
     // Change to project directory and install
     process.chdir(projectDir);
-    
+
     try {
       const { execSync } = await import('child_process');
       execSync(installCmd, { stdio: 'inherit' });
@@ -277,7 +277,7 @@ class AdvancedCLI {
 
   async startDevServer(options) {
     console.log(chalk.blue('[dev] Starting development server...'));
-    
+
     try {
       // Start the dev server with advanced features
       const devServer = await import('./dev-server.js');
@@ -286,7 +286,7 @@ class AdvancedCLI {
         host: options.host,
         hot: options.hot,
         analyze: options.analyze,
-        profile: options.profile
+        profile: options.profile,
       });
     } catch (error) {
       console.error(chalk.red('Error starting dev server:'), error);
@@ -296,23 +296,23 @@ class AdvancedCLI {
 
   async buildProject(options) {
     console.log(chalk.blue('[build] Building project...'));
-    
+
     try {
       const compiler = new FluxCompiler({
         outputDir: options.output,
         minify: options.minify,
         sourceMaps: options.sourceMaps,
-        analyze: options.analyze
+        analyze: options.analyze,
       });
 
       const results = await compiler.build();
-      
+
       if (options.analyze) {
         await this.analyzeBundle(results);
       }
-      
+
       console.log(chalk.green('[ok] Build completed'));
-      
+
     } catch (error) {
       console.error(chalk.red('Build failed:'), error);
       process.exit(1);
@@ -321,7 +321,7 @@ class AdvancedCLI {
 
   async runTests(options) {
     console.log(chalk.blue('[test] Running tests...'));
-    
+
     try {
       // Run test suite with advanced features
       const testRunner = await import('../test/run-tests.js');
@@ -334,17 +334,17 @@ class AdvancedCLI {
 
   async debugApplication(options) {
     console.log(chalk.blue('[debug] Starting debug session...'));
-    
+
     try {
       // Start debugging session
       if (options.inspect) {
         process.env.NODE_OPTIONS = '--inspect-brk';
       }
-      
+
       // Start the application in debug mode
       console.log(chalk.green('[ok] Debug session started'));
       console.log(chalk.yellow('[hint] Use your debugger to connect'));
-      
+
     } catch (error) {
       console.error(chalk.red('Debug session failed:'), error);
       process.exit(1);
@@ -353,23 +353,23 @@ class AdvancedCLI {
 
   async profileApplication(options) {
     console.log(chalk.blue('[profile] Starting performance profiling...'));
-    
+
     try {
       // Start profiling based on options
       if (options.cpu) {
         await this.startCPUProfiling(options.output);
       }
-      
+
       if (options.memory) {
         await this.startMemoryProfiling(options.output);
       }
-      
+
       if (options.network) {
         await this.startNetworkProfiling(options.output);
       }
-      
+
       console.log(chalk.green('[ok] Profiling started'));
-      
+
     } catch (error) {
       console.error(chalk.red('Profiling failed:'), error);
       process.exit(1);
@@ -378,22 +378,22 @@ class AdvancedCLI {
 
   async manageDatabase(options) {
     console.log(chalk.blue('[db] Managing database...'));
-    
+
     try {
       if (options.migrate) {
         await this.runMigrations();
       }
-      
+
       if (options.seed) {
         await this.seedDatabase();
       }
-      
+
       if (options.reset) {
         await this.resetDatabase();
       }
-      
+
       console.log(chalk.green('[ok] Database operations completed'));
-      
+
     } catch (error) {
       console.error(chalk.red('Database operations failed:'), error);
       process.exit(1);
@@ -402,11 +402,11 @@ class AdvancedCLI {
 
   async deployApplication(options) {
     console.log(chalk.blue('[deploy] Deploying application...'));
-    
+
     try {
       // Build the project first
       await this.buildProject({ output: 'dist' });
-      
+
       // Deploy based on platform
       if (options.platform === 'vercel') {
         await this.deployToVercel(options);
@@ -417,9 +417,9 @@ class AdvancedCLI {
       } else {
         console.log(chalk.yellow('[warn] No deployment platform specified'));
       }
-      
+
       console.log(chalk.green('[ok] Deployment completed'));
-      
+
     } catch (error) {
       console.error(chalk.red('Deployment failed:'), error);
       process.exit(1);
@@ -428,22 +428,22 @@ class AdvancedCLI {
 
   async maintenanceTasks(options) {
     console.log(chalk.blue('[maint] Running maintenance tasks...'));
-    
+
     try {
       if (options.clean) {
         await this.cleanBuildArtifacts();
       }
-      
+
       if (options.update) {
         await this.updateDependencies();
       }
-      
+
       if (options.audit) {
         await this.securityAudit();
       }
-      
+
       console.log(chalk.green('[ok] Maintenance tasks completed'));
-      
+
     } catch (error) {
       console.error(chalk.red('Maintenance tasks failed:'), error);
       process.exit(1);
@@ -453,22 +453,22 @@ class AdvancedCLI {
   // Template generation methods
   generatePackageJson(options) {
     return JSON.stringify({
-      name: "flux-project",
-      version: "1.0.0",
-      description: "Flux Language Project",
-      main: "src/app.flux",
+      name: 'flux-project',
+      version: '1.0.0',
+      description: 'Flux Language Project',
+      main: 'src/app.flux',
       scripts: {
-        "dev": "flux dev",
-        "build": "flux build",
-        "test": "flux test",
-        "start": "flux start"
+        'dev': 'flux dev',
+        'build': 'flux build',
+        'test': 'flux test',
+        'start': 'flux start',
       },
       dependencies: {
-        "flux-lang": "^2.0.0"
+        'flux-lang': '^2.0.0',
       },
       devDependencies: {
-        "@types/node": "^18.0.0"
-      }
+        '@types/node': '^18.0.0',
+      },
     }, null, 2);
   }
 
@@ -593,7 +593,7 @@ body {
   }
 
   generateGitignore() {
-    return `node_modules/\ndist/\n.env\n*.log\n.DS_Store`;
+    return 'node_modules/\ndist/\n.env\n*.log\n.DS_Store';
   }
 
   generateIndexHTML() {
@@ -723,7 +723,7 @@ body {
     if (type === 'store') {
       return `store ${compName}Store {\n  state value = null\n}`;
     }
-    return `// Unknown type`;
+    return '// Unknown type';
   }
 
   run() {

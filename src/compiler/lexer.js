@@ -19,7 +19,7 @@ export class FluxLexer {
     NUMBER: 'NUMBER',
     STRING: 'STRING',
     BOOLEAN: 'BOOLEAN',
-    
+
     // Keywords
     COMPONENT: 'COMPONENT',
     STATE: 'STATE',
@@ -34,6 +34,7 @@ export class FluxLexer {
     GUARD: 'GUARD',
     ROUTER: 'ROUTER',
     ROUTE: 'ROUTE',
+    STYLES: 'STYLES',
     USE: 'USE',
     IMPORT: 'IMPORT',
     EXPORT: 'EXPORT',
@@ -48,7 +49,7 @@ export class FluxLexer {
     CATCH: 'CATCH',
     FINALLY: 'FINALLY',
     ON: 'ON',
-    
+
     // Operators
     ASSIGN: 'ASSIGN',
     PLUS_ASSIGN: 'PLUS_ASSIGN',
@@ -67,7 +68,7 @@ export class FluxLexer {
     LOGICAL_AND: 'LOGICAL_AND',
     LOGICAL_OR: 'LOGICAL_OR',
     LOGICAL_NOT: 'LOGICAL_NOT',
-    
+
     // Delimiters
     LEFT_PAREN: 'LEFT_PAREN',
     RIGHT_PAREN: 'RIGHT_PAREN',
@@ -80,23 +81,23 @@ export class FluxLexer {
     DOT: 'DOT',
     COLON: 'COLON',
     QUESTION: 'QUESTION',
-    
+
     // JSX-like tokens
     JSX_OPEN: 'JSX_OPEN',
     JSX_CLOSE: 'JSX_CLOSE',
     JSX_SELF_CLOSE: 'JSX_SELF_CLOSE',
     JSX_TEXT: 'JSX_TEXT',
-    
+
     // Arrow function
     ARROW: 'ARROW',
-    
+
     // Decorators
     AT: 'AT',
-    
+
     // Special
     NEWLINE: 'NEWLINE',
     EOF: 'EOF',
-    UNKNOWN: 'UNKNOWN'
+    UNKNOWN: 'UNKNOWN',
   };
 
   static KEYWORDS = {
@@ -113,6 +114,7 @@ export class FluxLexer {
     'guard': 'GUARD',
     'router': 'ROUTER',
     'route': 'ROUTE',
+    'styles': 'STYLES',
     'use': 'USE',
     'import': 'IMPORT',
     'export': 'EXPORT',
@@ -130,14 +132,14 @@ export class FluxLexer {
     'true': 'BOOLEAN',
     'false': 'BOOLEAN',
     'null': 'BOOLEAN',
-    'undefined': 'BOOLEAN'
+    'undefined': 'BOOLEAN',
   };
 
   tokenize() {
     while (!this.isAtEnd()) {
       this.scanToken();
     }
-    
+
     this.addToken(FluxLexer.TOKEN_TYPES.EOF);
     return this.tokens;
   }
@@ -145,148 +147,148 @@ export class FluxLexer {
   scanToken() {
     this.start = this.position;
     const c = this.advance();
-    
+
     switch (c) {
-      case ' ':
-      case '\r':
-      case '\t':
-        break; // Ignore whitespace
-      
-      case '\n':
-        this.line++;
-        this.column = 1;
-        this.addToken(FluxLexer.TOKEN_TYPES.NEWLINE);
-        break;
-      
-      case '(':
-        this.addToken(FluxLexer.TOKEN_TYPES.LEFT_PAREN);
-        break;
-      case ')':
-        this.addToken(FluxLexer.TOKEN_TYPES.RIGHT_PAREN);
-        break;
-      case '{':
-        this.addToken(FluxLexer.TOKEN_TYPES.LEFT_BRACE);
-        break;
-      case '}':
-        this.addToken(FluxLexer.TOKEN_TYPES.RIGHT_BRACE);
-        break;
-      case '[':
-        this.addToken(FluxLexer.TOKEN_TYPES.LEFT_BRACKET);
-        break;
-      case ']':
-        this.addToken(FluxLexer.TOKEN_TYPES.RIGHT_BRACKET);
-        break;
-      case ';':
-        this.addToken(FluxLexer.TOKEN_TYPES.SEMICOLON);
-        break;
-      case ',':
-        this.addToken(FluxLexer.TOKEN_TYPES.COMMA);
-        break;
-      case '.':
-        this.addToken(FluxLexer.TOKEN_TYPES.DOT);
-        break;
-      case ':':
-        this.addToken(FluxLexer.TOKEN_TYPES.COLON);
-        break;
-      case '?':
-        this.addToken(FluxLexer.TOKEN_TYPES.QUESTION);
-        break;
-      case '@':
-        this.addToken(FluxLexer.TOKEN_TYPES.AT);
-        break;
-      
-      case '+':
-        this.addToken(this.match('=') ? 
-          FluxLexer.TOKEN_TYPES.PLUS_ASSIGN : 
-          FluxLexer.TOKEN_TYPES.PLUS
-        );
-        break;
-      case '-':
-        this.addToken(this.match('=') ? 
-          FluxLexer.TOKEN_TYPES.MINUS_ASSIGN : 
-          FluxLexer.TOKEN_TYPES.MINUS
-        );
-        break;
-      case '*':
-        this.addToken(FluxLexer.TOKEN_TYPES.MULTIPLY);
-        break;
-      case '%':
-        this.addToken(FluxLexer.TOKEN_TYPES.MODULO);
-        break;
-      
-      case '!':
-        this.addToken(this.match('=') ? 
-          FluxLexer.TOKEN_TYPES.NOT_EQUALS : 
-          FluxLexer.TOKEN_TYPES.LOGICAL_NOT
-        );
-        break;
-      case '=':
-        if (this.match('=')) {
-          this.addToken(FluxLexer.TOKEN_TYPES.EQUALS);
-        } else if (this.match('>')) {
-          this.addToken(FluxLexer.TOKEN_TYPES.ARROW);
-        } else {
-          this.addToken(FluxLexer.TOKEN_TYPES.ASSIGN);
+    case ' ':
+    case '\r':
+    case '\t':
+      break; // Ignore whitespace
+
+    case '\n':
+      this.line++;
+      this.column = 1;
+      this.addToken(FluxLexer.TOKEN_TYPES.NEWLINE);
+      break;
+
+    case '(':
+      this.addToken(FluxLexer.TOKEN_TYPES.LEFT_PAREN);
+      break;
+    case ')':
+      this.addToken(FluxLexer.TOKEN_TYPES.RIGHT_PAREN);
+      break;
+    case '{':
+      this.addToken(FluxLexer.TOKEN_TYPES.LEFT_BRACE);
+      break;
+    case '}':
+      this.addToken(FluxLexer.TOKEN_TYPES.RIGHT_BRACE);
+      break;
+    case '[':
+      this.addToken(FluxLexer.TOKEN_TYPES.LEFT_BRACKET);
+      break;
+    case ']':
+      this.addToken(FluxLexer.TOKEN_TYPES.RIGHT_BRACKET);
+      break;
+    case ';':
+      this.addToken(FluxLexer.TOKEN_TYPES.SEMICOLON);
+      break;
+    case ',':
+      this.addToken(FluxLexer.TOKEN_TYPES.COMMA);
+      break;
+    case '.':
+      this.addToken(FluxLexer.TOKEN_TYPES.DOT);
+      break;
+    case ':':
+      this.addToken(FluxLexer.TOKEN_TYPES.COLON);
+      break;
+    case '?':
+      this.addToken(FluxLexer.TOKEN_TYPES.QUESTION);
+      break;
+    case '@':
+      this.addToken(FluxLexer.TOKEN_TYPES.AT);
+      break;
+
+    case '+':
+      this.addToken(this.match('=') ?
+        FluxLexer.TOKEN_TYPES.PLUS_ASSIGN :
+        FluxLexer.TOKEN_TYPES.PLUS,
+      );
+      break;
+    case '-':
+      this.addToken(this.match('=') ?
+        FluxLexer.TOKEN_TYPES.MINUS_ASSIGN :
+        FluxLexer.TOKEN_TYPES.MINUS,
+      );
+      break;
+    case '*':
+      this.addToken(FluxLexer.TOKEN_TYPES.MULTIPLY);
+      break;
+    case '%':
+      this.addToken(FluxLexer.TOKEN_TYPES.MODULO);
+      break;
+
+    case '!':
+      this.addToken(this.match('=') ?
+        FluxLexer.TOKEN_TYPES.NOT_EQUALS :
+        FluxLexer.TOKEN_TYPES.LOGICAL_NOT,
+      );
+      break;
+    case '=':
+      if (this.match('=')) {
+        this.addToken(FluxLexer.TOKEN_TYPES.EQUALS);
+      } else if (this.match('>')) {
+        this.addToken(FluxLexer.TOKEN_TYPES.ARROW);
+      } else {
+        this.addToken(FluxLexer.TOKEN_TYPES.ASSIGN);
+      }
+      break;
+    case '<':
+      if (this.peek() === '/') {
+        this.advance(); // consume '/'
+        this.addToken(FluxLexer.TOKEN_TYPES.JSX_CLOSE);
+      } else if (this.match('=')) {
+        this.addToken(FluxLexer.TOKEN_TYPES.LESS_EQUAL);
+      } else {
+        this.addToken(FluxLexer.TOKEN_TYPES.JSX_OPEN);
+      }
+      break;
+    case '>':
+      this.addToken(this.match('=') ?
+        FluxLexer.TOKEN_TYPES.GREATER_EQUAL :
+        FluxLexer.TOKEN_TYPES.GREATER_THAN,
+      );
+      break;
+
+    case '&':
+      if (this.match('&')) {
+        this.addToken(FluxLexer.TOKEN_TYPES.LOGICAL_AND);
+      }
+      break;
+    case '|':
+      if (this.match('|')) {
+        this.addToken(FluxLexer.TOKEN_TYPES.LOGICAL_OR);
+      }
+      break;
+
+    case '/':
+      if (this.match('/')) {
+        // Single line comment
+        while (this.peek() !== '\n' && !this.isAtEnd()) {
+          this.advance();
         }
-        break;
-      case '<':
-        if (this.peek() === '/') {
-          this.advance(); // consume '/'
-          this.addToken(FluxLexer.TOKEN_TYPES.JSX_CLOSE);
-        } else if (this.match('=')) {
-          this.addToken(FluxLexer.TOKEN_TYPES.LESS_EQUAL);
-        } else {
-          this.addToken(FluxLexer.TOKEN_TYPES.JSX_OPEN);
-        }
-        break;
-      case '>':
-        this.addToken(this.match('=') ? 
-          FluxLexer.TOKEN_TYPES.GREATER_EQUAL : 
-          FluxLexer.TOKEN_TYPES.GREATER_THAN
-        );
-        break;
-      
-      case '&':
-        if (this.match('&')) {
-          this.addToken(FluxLexer.TOKEN_TYPES.LOGICAL_AND);
-        }
-        break;
-      case '|':
-        if (this.match('|')) {
-          this.addToken(FluxLexer.TOKEN_TYPES.LOGICAL_OR);
-        }
-        break;
-      
-      case '/':
-        if (this.match('/')) {
-          // Single line comment
-          while (this.peek() !== '\n' && !this.isAtEnd()) {
-            this.advance();
-          }
-        } else if (this.match('*')) {
-          // Multi-line comment
-          this.blockComment();
-        } else if (this.match('>')) {
-          this.addToken(FluxLexer.TOKEN_TYPES.JSX_SELF_CLOSE);
-        } else {
-          this.addToken(FluxLexer.TOKEN_TYPES.DIVIDE);
-        }
-        break;
-      
-      case '"':
-      case "'":
-        this.string(c);
-        break;
-      
-      default:
-        if (this.isDigit(c)) {
-          this.number();
-        } else if (this.isAlpha(c)) {
-          this.identifier();
-        } else {
-          this.addToken(FluxLexer.TOKEN_TYPES.UNKNOWN, c);
-        }
-        break;
+      } else if (this.match('*')) {
+        // Multi-line comment
+        this.blockComment();
+      } else if (this.match('>')) {
+        this.addToken(FluxLexer.TOKEN_TYPES.JSX_SELF_CLOSE);
+      } else {
+        this.addToken(FluxLexer.TOKEN_TYPES.DIVIDE);
+      }
+      break;
+
+    case '"':
+    case '\'':
+      this.string(c);
+      break;
+
+    default:
+      if (this.isDigit(c)) {
+        this.number();
+      } else if (this.isAlpha(c)) {
+        this.identifier();
+      } else {
+        this.addToken(FluxLexer.TOKEN_TYPES.UNKNOWN, c);
+      }
+      break;
     }
   }
 
@@ -294,7 +296,7 @@ export class FluxLexer {
     while (this.isAlphaNumeric(this.peek())) {
       this.advance();
     }
-    
+
     const text = this.source.substring(this.start, this.position);
     const type = FluxLexer.KEYWORDS[text] || FluxLexer.TOKEN_TYPES.IDENTIFIER;
     this.addToken(type, text);
@@ -304,7 +306,7 @@ export class FluxLexer {
     while (this.isDigit(this.peek())) {
       this.advance();
     }
-    
+
     // Look for decimal part
     if (this.peek() === '.' && this.isDigit(this.peekNext())) {
       this.advance(); // consume '.'
@@ -312,7 +314,7 @@ export class FluxLexer {
         this.advance();
       }
     }
-    
+
     const value = parseFloat(this.source.substring(this.start, this.position));
     this.addToken(FluxLexer.TOKEN_TYPES.NUMBER, value);
   }
@@ -322,13 +324,13 @@ export class FluxLexer {
       if (this.peek() === '\n') this.line++;
       this.advance();
     }
-    
+
     if (this.isAtEnd()) {
       throw new Error(`Unterminated string at line ${this.line}`);
     }
-    
+
     this.advance(); // closing quote
-    
+
     const value = this.source.substring(this.start + 1, this.position - 1);
     this.addToken(FluxLexer.TOKEN_TYPES.STRING, value);
   }
@@ -348,7 +350,7 @@ export class FluxLexer {
   match(expected) {
     if (this.isAtEnd()) return false;
     if (this.source.charAt(this.position) !== expected) return false;
-    
+
     this.position++;
     this.column++;
     return true;
@@ -399,7 +401,7 @@ export class FluxLexer {
       lexeme: text,
       literal,
       line: this.line,
-      column: this.column - text.length
+      column: this.column - text.length,
     });
   }
 }

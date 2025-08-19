@@ -43,6 +43,7 @@ var FluxLexer = class _FluxLexer {
     TRY: "TRY",
     CATCH: "CATCH",
     FINALLY: "FINALLY",
+    ON: "ON",
     // Operators
     ASSIGN: "ASSIGN",
     PLUS_ASSIGN: "PLUS_ASSIGN",
@@ -78,6 +79,8 @@ var FluxLexer = class _FluxLexer {
     JSX_CLOSE: "JSX_CLOSE",
     JSX_SELF_CLOSE: "JSX_SELF_CLOSE",
     JSX_TEXT: "JSX_TEXT",
+    // Arrow function
+    ARROW: "ARROW",
     // Decorators
     AT: "AT",
     // Special
@@ -102,6 +105,7 @@ var FluxLexer = class _FluxLexer {
     "use": "USE",
     "import": "IMPORT",
     "export": "EXPORT",
+    "on": "ON",
     "async": "ASYNC",
     "await": "AWAIT",
     "if": "IF",
@@ -196,9 +200,13 @@ var FluxLexer = class _FluxLexer {
         );
         break;
       case "=":
-        this.addToken(
-          this.match("=") ? _FluxLexer.TOKEN_TYPES.EQUALS : _FluxLexer.TOKEN_TYPES.ASSIGN
-        );
+        if (this.match("=")) {
+          this.addToken(_FluxLexer.TOKEN_TYPES.EQUALS);
+        } else if (this.match(">")) {
+          this.addToken(_FluxLexer.TOKEN_TYPES.ARROW);
+        } else {
+          this.addToken(_FluxLexer.TOKEN_TYPES.ASSIGN);
+        }
         break;
       case "<":
         if (this.peek() === "/") {
@@ -716,6 +724,13 @@ var TSBooleanKeyword = class extends ASTNode {
     super("TSBooleanKeyword", location);
   }
 };
+var ArrowFunctionExpression = class extends ASTNode {
+  constructor(params, body, location) {
+    super("ArrowFunctionExpression", location);
+    this.params = params;
+    this.body = body;
+  }
+};
 function createLocation(startLine, startColumn, endLine, endColumn) {
   return {
     start: { line: startLine, column: startColumn },
@@ -759,6 +774,9 @@ var FluxParser = class _FluxParser {
       const decorators = [];
       while (this.check("AT")) {
         decorators.push(this.decorator());
+        while (this.check("NEWLINE")) {
+          this.advance();
+        }
       }
       if (this.match("COMPONENT")) {
         return this.componentDeclaration(decorators);
@@ -812,7 +830,12 @@ var FluxParser = class _FluxParser {
   }
   decorator() {
     this.consume("AT", 'Expected "@"');
-    const name = this.consume("IDENTIFIER", "Expected decorator name");
+    let name;
+    if (this.check("IDENTIFIER") || this.check("ROUTE") || this.check("GUARD") || this.check("COMPONENT") || this.check("STORE")) {
+      name = this.advance();
+    } else {
+      throw new Error(`Expected decorator name. Got ${this.peek().type} "${this.peek().lexeme}" at line ${this.peek().line}`);
+    }
     let args = [];
     if (this.match("LEFT_PAREN")) {
       args = this.argumentList();
@@ -850,6 +873,13 @@ var FluxParser = class _FluxParser {
     }
     if (this.match("PROP")) {
       return this.propDeclaration();
+    }
+    if (this.match("ASYNC")) {
+      if (this.match("METHOD")) {
+        return this.methodDeclaration(true);
+      } else {
+        throw new Error('Expected "method" after "async"');
+      }
     }
     if (this.match("METHOD")) {
       return this.methodDeclaration();
@@ -902,8 +932,10 @@ var FluxParser = class _FluxParser {
       this.getCurrentLocation()
     );
   }
-  methodDeclaration() {
-    const isAsync = this.match("ASYNC");
+  methodDeclaration(isAsync = false) {
+    if (!isAsync) {
+      isAsync = this.match("ASYNC");
+    }
     const name = this.consume("IDENTIFIER", "Expected method name");
     this.consume("LEFT_PAREN", 'Expected "("');
     const parameters = this.parameterList();
@@ -918,7 +950,7 @@ var FluxParser = class _FluxParser {
     );
   }
   effectDeclaration() {
-    let dependencies = [];
+    const dependencies = [];
     if (this.match("ON")) {
       dependencies.push(this.expression());
       while (this.match("COMMA")) {
@@ -1131,6 +1163,26 @@ var FluxParser = class _FluxParser {
     return this.assignment();
   }
   assignment() {
+    if (this.check("LEFT_PAREN")) {
+      const checkpoint = this.current;
+      try {
+        this.advance();
+        const params = [];
+        if (!this.check("RIGHT_PAREN")) {
+          do {
+            params.push(this.consume("IDENTIFIER", "Expected parameter name"));
+          } while (this.match("COMMA"));
+        }
+        this.consume("RIGHT_PAREN", 'Expected ")" after parameters');
+        if (this.check("ARROW")) {
+          return this.arrowFunction(params);
+        } else {
+          this.current = checkpoint;
+        }
+      } catch (error) {
+        this.current = checkpoint;
+      }
+    }
     const expr = this.ternary();
     if (this.match("ASSIGN", "PLUS_ASSIGN", "MINUS_ASSIGN")) {
       const operator = this.previous();
@@ -1145,7 +1197,42 @@ var FluxParser = class _FluxParser {
         this.getCurrentLocation()
       );
     }
+    if (this.check("ARROW")) {
+      return this.arrowFunction(expr);
+    }
     return expr;
+  }
+  arrowFunction(params) {
+    this.consume("ARROW", 'Expected "=>"');
+    let paramList = [];
+    if (Array.isArray(params)) {
+      paramList = params.map((p) => new Identifier(p.lexeme));
+    } else if (params.type === "Identifier") {
+      paramList = [params];
+    } else {
+      throw new Error("Invalid arrow function parameters");
+    }
+    let body;
+    if (this.check("LEFT_BRACE")) {
+      body = this.blockStatement();
+    } else if (this.check("LEFT_PAREN")) {
+      this.advance();
+      while (this.check("NEWLINE")) {
+        this.advance();
+      }
+      body = this.expression();
+      while (this.check("NEWLINE")) {
+        this.advance();
+      }
+      this.consume("RIGHT_PAREN", 'Expected ")" after arrow function body');
+    } else {
+      body = this.assignment();
+    }
+    return new ArrowFunctionExpression(
+      paramList,
+      body,
+      this.getCurrentLocation()
+    );
   }
   ternary() {
     let expr = this.logicalOr();
@@ -1247,7 +1334,7 @@ var FluxParser = class _FluxParser {
     return expr;
   }
   unary() {
-    if (this.match("LOGICAL_NOT", "MINUS", "PLUS")) {
+    if (this.match("LOGICAL_NOT", "MINUS", "PLUS", "AWAIT")) {
       const operator = this.previous();
       const right = this.unary();
       return new UnaryExpression(
@@ -1377,12 +1464,16 @@ var FluxParser = class _FluxParser {
         this.consume("RIGHT_BRACE", 'Expected "}" after JSX expression');
         children.push(new JSXExpressionContainer(expr));
       } else {
-        let text = "";
-        while (!this.check("JSX_OPEN") && !this.check("JSX_CLOSE") && !this.check("LEFT_BRACE") && !this.isAtEnd()) {
-          text += this.advance().lexeme;
-        }
-        if (text.trim()) {
-          children.push(new JSXText(text.trim()));
+        if (this.check("NEWLINE")) {
+          this.advance();
+        } else {
+          let text = "";
+          while (!this.check("JSX_OPEN") && !this.check("JSX_CLOSE") && !this.check("LEFT_BRACE") && !this.check("NEWLINE") && !this.isAtEnd()) {
+            text += this.advance().lexeme;
+          }
+          if (text.trim()) {
+            children.push(new JSXText(text.trim()));
+          }
         }
       }
     }
@@ -1404,7 +1495,7 @@ var FluxParser = class _FluxParser {
     if (this.check("AT")) {
       this.advance();
       const eventName = this.consume("IDENTIFIER", "Expected event name after @");
-      name = new Identifier("@" + eventName.lexeme);
+      name = new Identifier(`@${eventName.lexeme}`);
     } else {
       const attrName = this.consume("IDENTIFIER", "Expected attribute name");
       name = new Identifier(attrName.lexeme);

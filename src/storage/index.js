@@ -17,15 +17,15 @@ class StorageManager {
       maxFileSize: options.maxFileSize || 10 * 1024 * 1024, // 10MB
       allowedTypes: options.allowedTypes || ['image/*', 'text/*', 'application/*'],
       cache: options.cache !== false,
-      ...options
+      ...options,
     };
-    
+
     this.cache = this.options.cache ? new FluxCache() : null;
     this.storageRoot = path.resolve(this.options.basePath);
     this.publicPath = path.join(this.storageRoot, this.options.publicPath);
     this.uploadsPath = path.join(this.storageRoot, this.options.uploadsPath);
     this.tempPath = path.join(this.storageRoot, this.options.tempPath);
-    
+
     this.initializeStorage();
   }
 
@@ -36,19 +36,19 @@ class StorageManager {
       await fs.ensureDir(this.publicPath);
       await fs.ensureDir(this.uploadsPath);
       await fs.ensureDir(this.tempPath);
-      
+
       // Create subdirectories for better organization
       await fs.ensureDir(path.join(this.publicPath, 'images'));
       await fs.ensureDir(path.join(this.publicPath, 'css'));
       await fs.ensureDir(path.join(this.publicPath, 'js'));
       await fs.ensureDir(path.join(this.publicPath, 'fonts'));
       await fs.ensureDir(path.join(this.publicPath, 'documents'));
-      
+
       await fs.ensureDir(path.join(this.uploadsPath, 'images'));
       await fs.ensureDir(path.join(this.uploadsPath, 'documents'));
       await fs.ensureDir(path.join(this.uploadsPath, 'videos'));
       await fs.ensureDir(path.join(this.uploadsPath, 'audio'));
-      
+
       console.log('✅ Storage system initialized successfully');
     } catch (error) {
       console.error('❌ Failed to initialize storage:', error);
@@ -62,7 +62,7 @@ class StorageManager {
       filename = file.name || `file_${Date.now()}`,
       subfolder = '',
       overwrite = false,
-      validate = true
+      validate = true,
     } = options;
 
     try {
@@ -97,7 +97,7 @@ class StorageManager {
         mimeType: file.mimetype || this.getMimeType(filename),
         uploadedAt: new Date(),
         destination,
-        subfolder
+        subfolder,
       };
 
       // Cache file info if caching is enabled
@@ -135,7 +135,7 @@ class StorageManager {
         size: stats.size,
         mimeType: this.getMimeType(filename),
         modifiedAt: stats.mtime,
-        destination
+        destination,
       };
 
       // Cache file info
@@ -178,7 +178,7 @@ class StorageManager {
       recursive = false,
       filter = null,
       sortBy = 'name',
-      sortOrder = 'asc'
+      sortOrder = 'asc',
     } = options;
 
     try {
@@ -190,7 +190,7 @@ class StorageManager {
       }
 
       const files = await this.scanDirectory(searchPath, recursive);
-      
+
       // Apply filters
       let filteredFiles = files;
       if (filter) {
@@ -242,14 +242,14 @@ class StorageManager {
 
   async scanDirectory(dirPath, recursive = false) {
     const files = [];
-    
+
     try {
       const entries = await fs.readdir(dirPath, { withFileTypes: true });
-      
+
       for (const entry of entries) {
         const fullPath = path.join(dirPath, entry.name);
         const relativePath = path.relative(this.storageRoot, fullPath);
-        
+
         if (entry.isDirectory() && recursive) {
           const subFiles = await this.scanDirectory(fullPath, recursive);
           files.push(...subFiles);
@@ -263,14 +263,14 @@ class StorageManager {
             size: stats.size,
             mimeType: this.getMimeType(entry.name),
             modifiedAt: stats.mtime,
-            createdAt: stats.birthtime
+            createdAt: stats.birthtime,
           });
         }
       }
     } catch (error) {
       console.error(`Error scanning directory ${dirPath}:`, error);
     }
-    
+
     return files;
   }
 
@@ -283,18 +283,18 @@ class StorageManager {
   async servePublicFile(filePath) {
     try {
       const fullPath = path.join(this.storageRoot, filePath);
-      
+
       if (!await fs.pathExists(fullPath)) {
         throw new Error('File not found');
       }
 
       const stats = await fs.stat(fullPath);
       const stream = fs.createReadStream(fullPath);
-      
+
       return {
         stream,
         stats,
-        mimeType: this.getMimeType(filePath)
+        mimeType: this.getMimeType(filePath),
       };
     } catch (error) {
       console.error('Error serving public file:', error);
@@ -348,9 +348,9 @@ class StorageManager {
       '.txt': 'text/plain',
       '.md': 'text/markdown',
       '.xml': 'text/xml',
-      '.csv': 'text/csv'
+      '.csv': 'text/csv',
     };
-    
+
     return mimeTypes[ext] || 'application/octet-stream';
   }
 
@@ -359,7 +359,7 @@ class StorageManager {
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
   }
 
   // Storage statistics
@@ -375,9 +375,9 @@ class StorageManager {
         temp: tempStats,
         total: {
           files: publicStats.files + uploadsStats.files + tempStats.files,
-          size: publicStats.size + uploadsStats.size + tempStats.size
+          size: publicStats.size + uploadsStats.size + tempStats.size,
         },
-        cache: this.cache ? this.cache.getStats() : null
+        cache: this.cache ? this.cache.getStats() : null,
       };
     } catch (error) {
       console.error('Error getting storage stats:', error);
@@ -398,7 +398,7 @@ class StorageManager {
       return {
         files: files.length,
         size: totalSize,
-        directories
+        directories,
       };
     } catch (error) {
       console.error(`Error getting directory stats for ${dirPath}:`, error);
@@ -470,24 +470,24 @@ class StorageManager {
       const tempHealth = await this.checkDirectoryHealth(this.tempPath);
 
       const overallHealth = publicHealth && uploadsHealth && tempHealth;
-      
+
       return {
         status: overallHealth ? 'healthy' : 'degraded',
         message: overallHealth ? 'All storage systems operational' : 'Some storage systems experiencing issues',
         details: {
           public: publicHealth ? 'operational' : 'issues detected',
           uploads: uploadsHealth ? 'operational' : 'issues detected',
-          temp: tempHealth ? 'operational' : 'issues detected'
+          temp: tempHealth ? 'operational' : 'issues detected',
         },
-        stats: stats,
-        timestamp: new Date().toISOString()
+        stats,
+        timestamp: new Date().toISOString(),
       };
     } catch (error) {
       return {
         status: 'unhealthy',
         message: `Storage health check failed: ${error.message}`,
         error: error.message,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
     }
   }
@@ -497,15 +497,15 @@ class StorageManager {
       if (!await fs.pathExists(dirPath)) {
         return false;
       }
-      
+
       // Check if directory is readable and writable
       await fs.access(dirPath, fs.constants.R_OK | fs.constants.W_OK);
-      
+
       // Check if we can create a test file
       const testFile = path.join(dirPath, '.health-check');
       await fs.writeFile(testFile, 'health check');
       await fs.remove(testFile);
-      
+
       return true;
     } catch (error) {
       return false;
