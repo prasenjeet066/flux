@@ -1102,6 +1102,22 @@ export class FluxRuntime {
       return instance;
     }
   }
+
+  static createComponent(componentClass, props = {}) {
+    return new componentClass(props);
+  }
+
+  static createStore(storeClass, initialState = {}) {
+    return new storeClass(initialState);
+  }
+
+  createComponent(componentClass, props = {}) {
+    return new componentClass(props);
+  }
+
+  createStore(storeClass, initialState = {}) {
+    return new storeClass(initialState);
+  }
 }
 
 // Factory functions
@@ -1122,6 +1138,15 @@ export function createEffect(fn, dependencies) {
 
 export function createComputed(fn) {
   return new Computed(fn);
+}
+
+// Component and store creation helpers
+export function createComponent(componentClass, props = {}) {
+  return new componentClass(props);
+}
+
+export function createStore(storeClass, initialState = {}) {
+  return new storeClass(initialState);
 }
 
 // JSX helper

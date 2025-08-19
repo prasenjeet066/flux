@@ -488,6 +488,14 @@ export class TSUnionType extends ASTNode {
   }
 }
 
+export class ArrowFunctionExpression extends ASTNode {
+  constructor(params, body, location) {
+    super('ArrowFunctionExpression', location);
+    this.params = params;
+    this.body = body;
+  }
+}
+
 // Utility function to create location object
 export function createLocation(startLine, startColumn, endLine, endColumn) {
   return {
