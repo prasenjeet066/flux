@@ -96,7 +96,7 @@ component App {
                   <strong>Total Size:</strong> {this.formatBytes(this.storageStats.total.size)}
                 </div>
                 <div class="storage-item">
-                  <strong>Cache Hit Rate:</strong> {this.storageStats.cache?.hitRate || 'N/A'}
+                  <strong>Cache Hit Rate:</strong> {(this.storageStats.cache && this.storageStats.cache.hitRate) || 'N/A'}
                 </div>
               </div>
             </div>
