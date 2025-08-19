@@ -15,6 +15,7 @@ var FluxCodeGenerator = class {
     this.componentCount = 0;
     this.storeCount = 0;
     this.errors = [];
+    this.currentContext = "global";
   }
   generate(ast) {
     this.output = [];
@@ -58,6 +59,7 @@ var FluxCodeGenerator = class {
   visitComponentDeclaration(node) {
     const componentName = node.name.name;
     this.componentCount++;
+    this.currentContext = "component";
     this.addLine(`class ${componentName} extends Component {`);
     this.indent++;
     this.addLine("constructor(props = {}) {");
@@ -168,15 +170,20 @@ var FluxCodeGenerator = class {
     this.addLine(`export { ${storeName}Instance as ${storeName} };`);
   }
   visitMethodDeclaration(node) {
-    const name = node.name.name;
-    const asyncKeyword = node.isAsync ? "async " : "";
-    const params = node.parameters.map((p) => p.name.name).join(", ");
-    this.addLine(`${asyncKeyword}${name}(${params}) {`);
+    this.currentContext = "method";
+    const methodName = node.name.name;
+    const isAsync = node.isAsync;
+    if (isAsync) {
+      this.addLine(`async ${methodName}() {`);
+    } else {
+      this.addLine(`${methodName}() {`);
+    }
     this.indent++;
     this.visit(node.body);
     this.indent--;
     this.addLine("}");
     this.addLine("");
+    this.currentContext = "component";
   }
   visitActionDeclaration(node) {
     const name = node.name.name;
@@ -200,16 +207,16 @@ var FluxCodeGenerator = class {
     this.addLine("");
   }
   visitRenderDeclaration(node) {
+    this.currentContext = "render";
     this.addLine("render() {");
     this.indent++;
-    this.addLine("return (");
-    this.indent++;
+    this.addLine("return ");
     this.visit(node.body);
-    this.indent--;
-    this.addLine(");");
+    this.addLine(";");
     this.indent--;
     this.addLine("}");
     this.addLine("");
+    this.currentContext = "component";
   }
   visitStateDeclaration(node) {
     const name = node.name.name;
@@ -248,7 +255,7 @@ var FluxCodeGenerator = class {
   visitBlockStatement(node) {
     for (let i = 0; i < node.body.length; i++) {
       this.visit(node.body[i]);
-      if (node.body[i].type === "ExpressionStatement") {
+      if (node.body[i].type === "ExpressionStatement" && node.body[i].expression.type !== "JSXElement") {
         this.add(";");
       }
       if (i < node.body.length - 1) {
@@ -315,19 +322,16 @@ var FluxCodeGenerator = class {
     this.visit(node.operand);
   }
   visitAssignmentExpression(node) {
-    if (node.left.type === "MemberExpression" && node.left.object.type === "Identifier" && node.left.object.name === "this") {
-      this.add("this.");
-      this.visit(node.left.property);
-      this.add(".value ");
-      this.add(node.operator);
-      this.add(" ");
-      this.visit(node.right);
-    } else if (node.left.type === "Identifier") {
-      this.add(`this.${node.left.name}.value ${node.operator} `);
+    if (node.left.type === "Identifier") {
+      if (this.isInMethodContext() && this.isReactiveState(node.left.name)) {
+        this.add(`this.${node.left.name}.value ${node.operator.lexeme} `);
+      } else {
+        this.add(`${node.left.name} ${node.operator.lexeme} `);
+      }
       this.visit(node.right);
     } else {
       this.visit(node.left);
-      this.add(` ${node.operator} `);
+      this.add(` ${node.operator.lexeme} `);
       this.visit(node.right);
     }
   }
@@ -431,25 +435,19 @@ var FluxCodeGenerator = class {
   }
   visitJSXElement(node) {
     this.add("createElement(");
-    if (node.openingElement.name.name.charAt(0).toLowerCase() === node.openingElement.name.name.charAt(0)) {
-      this.add(`'${node.openingElement.name.name}'`);
-    } else {
-      this.add(node.openingElement.name.name);
-    }
-    if (node.openingElement.attributes.length > 0) {
+    const elementName = node.openingElement.name.name;
+    this.add(JSON.stringify(elementName));
+    if (node.openingElement.attributes && node.openingElement.attributes.length > 0) {
       this.add(", {");
       for (let i = 0; i < node.openingElement.attributes.length; i++) {
-        const attr = node.openingElement.attributes[i];
-        this.visitJSXAttribute(attr);
-        if (i < node.openingElement.attributes.length - 1) {
-          this.add(", ");
-        }
+        if (i > 0) this.add(", ");
+        this.visit(node.openingElement.attributes[i]);
       }
       this.add("}");
     } else {
       this.add(", null");
     }
-    if (node.children.length > 0) {
+    if (node.children && node.children.length > 0) {
       for (const child of node.children) {
         this.add(", ");
         if (child.type === "JSXText") {
@@ -476,6 +474,65 @@ var FluxCodeGenerator = class {
       this.visit(node.value);
     }
   }
+  visitArrowFunction(node) {
+    this.add("(");
+    if (node.params.length > 0) {
+      this.add(node.params.map((param) => param.lexeme || param.name).join(", "));
+    }
+    this.add(") => ");
+    if (node.body.type === "Block") {
+      this.visit(node.body);
+    } else {
+      this.visit(node.body);
+    }
+  }
+  visitArrayLiteral(node) {
+    this.add("[");
+    if (node.elements.length > 0) {
+      for (let i = 0; i < node.elements.length; i++) {
+        if (i > 0) this.add(", ");
+        this.visit(node.elements[i]);
+      }
+    }
+    this.add("]");
+  }
+  visitObjectLiteral(node) {
+    this.add("{");
+    if (node.properties.length > 0) {
+      for (let i = 0; i < node.properties.length; i++) {
+        if (i > 0) this.add(", ");
+        const prop = node.properties[i];
+        this.add(`${prop.key.lexeme || prop.key.name}: `);
+        this.visit(prop.value);
+      }
+    }
+    this.add("}");
+  }
+  visitStylesDeclaration(node) {
+    this.addLine(`// Styles for ${node.target.name}`);
+    this.addLine("const styles = {");
+    this.indent++;
+    for (const rule of node.rules) {
+      this.visit(rule);
+    }
+    this.indent--;
+    this.addLine("};");
+    this.addLine("");
+  }
+  visitStyleRule(node) {
+    this.add(`${node.selector}: {`);
+    this.indent++;
+    for (const property of node.properties) {
+      this.visit(property);
+    }
+    this.indent--;
+    this.addLine("},");
+  }
+  visitStyleProperty(node) {
+    this.add(`${node.name}: `);
+    this.visit(node.value);
+    this.addLine(",");
+  }
   visitJSXExpressionContainer(node) {
     this.visit(node.expression);
   }
@@ -483,8 +540,11 @@ var FluxCodeGenerator = class {
     this.add(JSON.stringify(node.value));
   }
   // Utility methods
+  isInMethodContext() {
+    return this.currentContext === "method";
+  }
   isInRenderContext() {
-    return true;
+    return this.currentContext === "render";
   }
   isReactiveState(name) {
     const nonStateIdentifiers = [
@@ -506,9 +566,8 @@ var FluxCodeGenerator = class {
       "parseFloat",
       "isNaN",
       "isFinite",
-      "title",
-      "count"
       // Props should not be treated as reactive state
+      "title"
     ];
     return !nonStateIdentifiers.includes(name);
   }

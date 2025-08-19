@@ -63,6 +63,10 @@ export class FluxParser {
         return this.guardDeclaration(decorators);
       }
       
+      if (this.match('STYLES')) {
+        return this.stylesDeclaration(decorators);
+      }
+      
       return this.statement();
     } catch (error) {
       this.synchronize();
@@ -391,6 +395,73 @@ export class FluxParser {
     );
   }
 
+  stylesDeclaration(decorators = []) {
+    const target = this.consume('IDENTIFIER', 'Expected component name for styles');
+    
+    this.consume('LEFT_BRACE', 'Expected "{"');
+    
+    const rules = [];
+    while (!this.check('RIGHT_BRACE') && !this.isAtEnd()) {
+      if (this.check('NEWLINE')) {
+        this.advance();
+        continue;
+      }
+      
+      const rule = this.styleRule();
+      if (rule) rules.push(rule);
+    }
+    
+    this.consume('RIGHT_BRACE', 'Expected "}"');
+    
+    return new AST.StylesDeclaration(
+      new AST.Identifier(target.lexeme),
+      rules,
+      decorators,
+      this.getCurrentLocation()
+    );
+  }
+
+  styleRule() {
+    const selector = this.consume('IDENTIFIER', 'Expected CSS selector');
+    
+    this.consume('LEFT_BRACE', 'Expected "{"');
+    
+    const properties = [];
+    while (!this.check('RIGHT_BRACE') && !this.isAtEnd()) {
+      if (this.check('NEWLINE')) {
+        this.advance();
+        continue;
+      }
+      
+      const property = this.styleProperty();
+      if (property) properties.push(property);
+    }
+    
+    this.consume('RIGHT_BRACE', 'Expected "}"');
+    
+    return new AST.StyleRule(
+      selector.lexeme,
+      properties,
+      this.getCurrentLocation()
+    );
+  }
+
+  styleProperty() {
+    const name = this.consume('IDENTIFIER', 'Expected CSS property name');
+    
+    this.consume('COLON', 'Expected ":"');
+    
+    const value = this.expression();
+    
+    this.consume('SEMICOLON', 'Expected ";"');
+    
+    return new AST.StyleProperty(
+      name.lexeme,
+      value,
+      this.getCurrentLocation()
+    );
+  }
+
   // Statements
   statement() {
     if (this.match('IF')) {
@@ -535,22 +606,22 @@ export class FluxParser {
   }
 
   assignment() {
-    const expr = this.ternary();
+    const expr = this.logicalOr();
     
-    if (this.match('ASSIGN', 'PLUS_ASSIGN', 'MINUS_ASSIGN')) {
+    if (this.match('ASSIGN', 'PLUS_ASSIGN', 'MINUS_ASSIGN', 'MULTIPLY_ASSIGN', 'DIVIDE_ASSIGN', 'MODULO_ASSIGN')) {
       const operator = this.previous();
       const value = this.assignment();
       
-      if (expr.type !== 'Identifier') {
-        throw new Error('Invalid assignment target');
+      if (expr instanceof AST.Identifier) {
+        return new AST.AssignmentExpression(
+          expr,
+          operator,
+          value,
+          this.getCurrentLocation()
+        );
       }
       
-      return new AST.AssignmentExpression(
-        expr,
-        operator.lexeme,
-        value,
-        this.getCurrentLocation()
-      );
+      this.error(operator, 'Invalid assignment target');
     }
     
     return expr;
@@ -806,6 +877,11 @@ export class FluxParser {
     // JSX Element
     if (this.check('JSX_OPEN')) {
       return this.jsxElement();
+    }
+    
+    // Arrow function
+    if (this.check('IDENTIFIER') && this.peekNext() === 'ARROW') {
+      return this.arrowFunction();
     }
     
     throw new Error(`Unexpected token: ${this.peek().lexeme} at line ${this.peek().line}`);

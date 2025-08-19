@@ -44,10 +44,32 @@ var FluxLexer = class _FluxLexer {
     TRY: "TRY",
     CATCH: "CATCH",
     FINALLY: "FINALLY",
+    ARROW: "ARROW",
+    MAP: "MAP",
+    FILTER: "FILTER",
+    REDUCE: "REDUCE",
+    FIND: "FIND",
+    FOREACH: "FOREACH",
+    INCLUDES: "INCLUDES",
+    INDEXOF: "INDEXOF",
+    SLICE: "SLICE",
+    SPLICE: "SPLICE",
+    PUSH: "PUSH",
+    POP: "POP",
+    SHIFT: "SHIFT",
+    UNSHIFT: "UNSHIFT",
+    SORT: "SORT",
+    REVERSE: "REVERSE",
+    JOIN: "JOIN",
+    SPLIT: "SPLIT",
+    CONCAT: "CONCAT",
     // Operators
     ASSIGN: "ASSIGN",
     PLUS_ASSIGN: "PLUS_ASSIGN",
     MINUS_ASSIGN: "MINUS_ASSIGN",
+    MULTIPLY_ASSIGN: "MULTIPLY_ASSIGN",
+    DIVIDE_ASSIGN: "DIVIDE_ASSIGN",
+    MODULO_ASSIGN: "MODULO_ASSIGN",
     PLUS: "PLUS",
     MINUS: "MINUS",
     MULTIPLY: "MULTIPLY",
@@ -117,7 +139,25 @@ var FluxLexer = class _FluxLexer {
     "true": "BOOLEAN",
     "false": "BOOLEAN",
     "null": "BOOLEAN",
-    "undefined": "BOOLEAN"
+    "undefined": "BOOLEAN",
+    "map": "MAP",
+    "filter": "FILTER",
+    "reduce": "REDUCE",
+    "find": "FIND",
+    "forEach": "FOREACH",
+    "includes": "INCLUDES",
+    "indexOf": "INDEXOF",
+    "slice": "SLICE",
+    "splice": "SPLICE",
+    "push": "PUSH",
+    "pop": "POP",
+    "shift": "SHIFT",
+    "unshift": "UNSHIFT",
+    "sort": "SORT",
+    "reverse": "REVERSE",
+    "join": "JOIN",
+    "split": "SPLIT",
+    "concat": "CONCAT"
   };
   tokenize() {
     while (!this.isAtEnd()) {
@@ -177,20 +217,47 @@ var FluxLexer = class _FluxLexer {
         this.addToken(_FluxLexer.TOKEN_TYPES.AT);
         break;
       case "+":
-        this.addToken(
-          this.match("=") ? _FluxLexer.TOKEN_TYPES.PLUS_ASSIGN : _FluxLexer.TOKEN_TYPES.PLUS
-        );
+        if (this.match("=")) {
+          this.addToken(_FluxLexer.TOKEN_TYPES.PLUS_ASSIGN);
+        } else {
+          this.addToken(_FluxLexer.TOKEN_TYPES.PLUS);
+        }
         break;
       case "-":
-        this.addToken(
-          this.match("=") ? _FluxLexer.TOKEN_TYPES.MINUS_ASSIGN : _FluxLexer.TOKEN_TYPES.MINUS
-        );
+        if (this.match("=")) {
+          this.addToken(_FluxLexer.TOKEN_TYPES.MINUS_ASSIGN);
+        } else {
+          this.addToken(_FluxLexer.TOKEN_TYPES.MINUS);
+        }
         break;
       case "*":
-        this.addToken(_FluxLexer.TOKEN_TYPES.MULTIPLY);
+        if (this.match("=")) {
+          this.addToken(_FluxLexer.TOKEN_TYPES.MULTIPLY_ASSIGN);
+        } else {
+          this.addToken(_FluxLexer.TOKEN_TYPES.MULTIPLY);
+        }
+        break;
+      case "/":
+        if (this.match("=")) {
+          this.addToken(_FluxLexer.TOKEN_TYPES.DIVIDE_ASSIGN);
+        } else if (this.match("/")) {
+          while (this.peek() !== "\n" && !this.isAtEnd()) {
+            this.advance();
+          }
+        } else if (this.match("*")) {
+          this.blockComment();
+        } else if (this.match(">")) {
+          this.addToken(_FluxLexer.TOKEN_TYPES.JSX_SELF_CLOSE);
+        } else {
+          this.addToken(_FluxLexer.TOKEN_TYPES.DIVIDE);
+        }
         break;
       case "%":
-        this.addToken(_FluxLexer.TOKEN_TYPES.MODULO);
+        if (this.match("=")) {
+          this.addToken(_FluxLexer.TOKEN_TYPES.MODULO_ASSIGN);
+        } else {
+          this.addToken(_FluxLexer.TOKEN_TYPES.MODULO);
+        }
         break;
       case "!":
         this.addToken(
@@ -213,9 +280,15 @@ var FluxLexer = class _FluxLexer {
         }
         break;
       case ">":
-        this.addToken(
-          this.match("=") ? _FluxLexer.TOKEN_TYPES.GREATER_EQUAL : _FluxLexer.TOKEN_TYPES.GREATER_THAN
-        );
+        if (this.match("=")) {
+          this.addToken(_FluxLexer.TOKEN_TYPES.GREATER_EQUAL);
+        } else if (this.peek() === "=" && this.peekNext() === ">") {
+          this.advance();
+          this.advance();
+          this.addToken(_FluxLexer.TOKEN_TYPES.ARROW);
+        } else {
+          this.addToken(_FluxLexer.TOKEN_TYPES.GREATER_THAN);
+        }
         break;
       case "&":
         if (this.match("&")) {
@@ -225,19 +298,6 @@ var FluxLexer = class _FluxLexer {
       case "|":
         if (this.match("|")) {
           this.addToken(_FluxLexer.TOKEN_TYPES.LOGICAL_OR);
-        }
-        break;
-      case "/":
-        if (this.match("/")) {
-          while (this.peek() !== "\n" && !this.isAtEnd()) {
-            this.advance();
-          }
-        } else if (this.match("*")) {
-          this.blockComment();
-        } else if (this.match(">")) {
-          this.addToken(_FluxLexer.TOKEN_TYPES.JSX_SELF_CLOSE);
-        } else {
-          this.addToken(_FluxLexer.TOKEN_TYPES.DIVIDE);
         }
         break;
       case '"':

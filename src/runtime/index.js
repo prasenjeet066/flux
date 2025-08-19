@@ -1082,18 +1082,41 @@ export class FluxRuntime {
     return this.router.navigate(path, replace);
   }
 
-  static mount(component, container) {
+  // Component creation and management
+  static createComponent(ComponentClass, props = {}, container = null) {
+    const component = new ComponentClass(props);
+    
+    if (container) {
+      this.mount(component, container);
+    }
+    
+    return component;
+  }
+  
+  static createStore(StoreClass, initialState = {}) {
+    const store = new StoreClass();
+    
+    // Initialize with provided state
+    if (initialState && typeof initialState === 'object') {
+      Object.assign(store, initialState);
+    }
+    
+    return store;
+  }
+  
+  // Mount component to DOM
+  static mount(component, selector) {
     if (isBrowser) {
-      if (typeof container === 'string') {
-        container = document.querySelector(container);
+      if (typeof selector === 'string') {
+        selector = document.querySelector(selector);
       }
       
-      if (!container) {
+      if (!selector) {
         throw new Error('Container not found');
       }
       
       const instance = new component();
-      instance.mount(container);
+      instance.mount(selector);
       
       return instance;
     } else {
@@ -1513,3 +1536,7 @@ export const FluxProfiler = {
 
 // Export the mount function
 export const mount = FluxRuntime.mount;
+
+// Export runtime methods
+export const createComponent = FluxRuntime.createComponent;
+export const createStore = FluxRuntime.createStore;

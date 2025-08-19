@@ -44,10 +44,32 @@ var FluxLexer = class _FluxLexer {
     TRY: "TRY",
     CATCH: "CATCH",
     FINALLY: "FINALLY",
+    ARROW: "ARROW",
+    MAP: "MAP",
+    FILTER: "FILTER",
+    REDUCE: "REDUCE",
+    FIND: "FIND",
+    FOREACH: "FOREACH",
+    INCLUDES: "INCLUDES",
+    INDEXOF: "INDEXOF",
+    SLICE: "SLICE",
+    SPLICE: "SPLICE",
+    PUSH: "PUSH",
+    POP: "POP",
+    SHIFT: "SHIFT",
+    UNSHIFT: "UNSHIFT",
+    SORT: "SORT",
+    REVERSE: "REVERSE",
+    JOIN: "JOIN",
+    SPLIT: "SPLIT",
+    CONCAT: "CONCAT",
     // Operators
     ASSIGN: "ASSIGN",
     PLUS_ASSIGN: "PLUS_ASSIGN",
     MINUS_ASSIGN: "MINUS_ASSIGN",
+    MULTIPLY_ASSIGN: "MULTIPLY_ASSIGN",
+    DIVIDE_ASSIGN: "DIVIDE_ASSIGN",
+    MODULO_ASSIGN: "MODULO_ASSIGN",
     PLUS: "PLUS",
     MINUS: "MINUS",
     MULTIPLY: "MULTIPLY",
@@ -117,7 +139,25 @@ var FluxLexer = class _FluxLexer {
     "true": "BOOLEAN",
     "false": "BOOLEAN",
     "null": "BOOLEAN",
-    "undefined": "BOOLEAN"
+    "undefined": "BOOLEAN",
+    "map": "MAP",
+    "filter": "FILTER",
+    "reduce": "REDUCE",
+    "find": "FIND",
+    "forEach": "FOREACH",
+    "includes": "INCLUDES",
+    "indexOf": "INDEXOF",
+    "slice": "SLICE",
+    "splice": "SPLICE",
+    "push": "PUSH",
+    "pop": "POP",
+    "shift": "SHIFT",
+    "unshift": "UNSHIFT",
+    "sort": "SORT",
+    "reverse": "REVERSE",
+    "join": "JOIN",
+    "split": "SPLIT",
+    "concat": "CONCAT"
   };
   tokenize() {
     while (!this.isAtEnd()) {
@@ -177,20 +217,47 @@ var FluxLexer = class _FluxLexer {
         this.addToken(_FluxLexer.TOKEN_TYPES.AT);
         break;
       case "+":
-        this.addToken(
-          this.match("=") ? _FluxLexer.TOKEN_TYPES.PLUS_ASSIGN : _FluxLexer.TOKEN_TYPES.PLUS
-        );
+        if (this.match("=")) {
+          this.addToken(_FluxLexer.TOKEN_TYPES.PLUS_ASSIGN);
+        } else {
+          this.addToken(_FluxLexer.TOKEN_TYPES.PLUS);
+        }
         break;
       case "-":
-        this.addToken(
-          this.match("=") ? _FluxLexer.TOKEN_TYPES.MINUS_ASSIGN : _FluxLexer.TOKEN_TYPES.MINUS
-        );
+        if (this.match("=")) {
+          this.addToken(_FluxLexer.TOKEN_TYPES.MINUS_ASSIGN);
+        } else {
+          this.addToken(_FluxLexer.TOKEN_TYPES.MINUS);
+        }
         break;
       case "*":
-        this.addToken(_FluxLexer.TOKEN_TYPES.MULTIPLY);
+        if (this.match("=")) {
+          this.addToken(_FluxLexer.TOKEN_TYPES.MULTIPLY_ASSIGN);
+        } else {
+          this.addToken(_FluxLexer.TOKEN_TYPES.MULTIPLY);
+        }
+        break;
+      case "/":
+        if (this.match("=")) {
+          this.addToken(_FluxLexer.TOKEN_TYPES.DIVIDE_ASSIGN);
+        } else if (this.match("/")) {
+          while (this.peek() !== "\n" && !this.isAtEnd()) {
+            this.advance();
+          }
+        } else if (this.match("*")) {
+          this.blockComment();
+        } else if (this.match(">")) {
+          this.addToken(_FluxLexer.TOKEN_TYPES.JSX_SELF_CLOSE);
+        } else {
+          this.addToken(_FluxLexer.TOKEN_TYPES.DIVIDE);
+        }
         break;
       case "%":
-        this.addToken(_FluxLexer.TOKEN_TYPES.MODULO);
+        if (this.match("=")) {
+          this.addToken(_FluxLexer.TOKEN_TYPES.MODULO_ASSIGN);
+        } else {
+          this.addToken(_FluxLexer.TOKEN_TYPES.MODULO);
+        }
         break;
       case "!":
         this.addToken(
@@ -213,9 +280,15 @@ var FluxLexer = class _FluxLexer {
         }
         break;
       case ">":
-        this.addToken(
-          this.match("=") ? _FluxLexer.TOKEN_TYPES.GREATER_EQUAL : _FluxLexer.TOKEN_TYPES.GREATER_THAN
-        );
+        if (this.match("=")) {
+          this.addToken(_FluxLexer.TOKEN_TYPES.GREATER_EQUAL);
+        } else if (this.peek() === "=" && this.peekNext() === ">") {
+          this.advance();
+          this.advance();
+          this.addToken(_FluxLexer.TOKEN_TYPES.ARROW);
+        } else {
+          this.addToken(_FluxLexer.TOKEN_TYPES.GREATER_THAN);
+        }
         break;
       case "&":
         if (this.match("&")) {
@@ -225,19 +298,6 @@ var FluxLexer = class _FluxLexer {
       case "|":
         if (this.match("|")) {
           this.addToken(_FluxLexer.TOKEN_TYPES.LOGICAL_OR);
-        }
-        break;
-      case "/":
-        if (this.match("/")) {
-          while (this.peek() !== "\n" && !this.isAtEnd()) {
-            this.advance();
-          }
-        } else if (this.match("*")) {
-          this.blockComment();
-        } else if (this.match(">")) {
-          this.addToken(_FluxLexer.TOKEN_TYPES.JSX_SELF_CLOSE);
-        } else {
-          this.addToken(_FluxLexer.TOKEN_TYPES.DIVIDE);
         }
         break;
       case '"':
@@ -718,6 +778,28 @@ var TSBooleanKeyword = class extends ASTNode {
     super("TSBooleanKeyword", location);
   }
 };
+var StylesDeclaration = class extends ASTNode {
+  constructor(target, rules, decorators, location) {
+    super("StylesDeclaration", location);
+    this.target = target;
+    this.rules = rules;
+    this.decorators = decorators || [];
+  }
+};
+var StyleRule = class extends ASTNode {
+  constructor(selector, properties, location) {
+    super("StyleRule", location);
+    this.selector = selector;
+    this.properties = properties;
+  }
+};
+var StyleProperty = class extends ASTNode {
+  constructor(name, value, location) {
+    super("StyleProperty", location);
+    this.name = name;
+    this.value = value;
+  }
+};
 function createLocation(startLine, startColumn, endLine, endColumn) {
   return {
     start: { line: startLine, column: startColumn },
@@ -770,6 +852,9 @@ var FluxParser = class _FluxParser {
       }
       if (this.match("GUARD")) {
         return this.guardDeclaration(decorators);
+      }
+      if (this.match("STYLES")) {
+        return this.stylesDeclaration(decorators);
       }
       return this.statement();
     } catch (error) {
@@ -1024,6 +1109,56 @@ var FluxParser = class _FluxParser {
       this.getCurrentLocation()
     );
   }
+  stylesDeclaration(decorators = []) {
+    const target = this.consume("IDENTIFIER", "Expected component name for styles");
+    this.consume("LEFT_BRACE", 'Expected "{"');
+    const rules = [];
+    while (!this.check("RIGHT_BRACE") && !this.isAtEnd()) {
+      if (this.check("NEWLINE")) {
+        this.advance();
+        continue;
+      }
+      const rule = this.styleRule();
+      if (rule) rules.push(rule);
+    }
+    this.consume("RIGHT_BRACE", 'Expected "}"');
+    return new StylesDeclaration(
+      new Identifier(target.lexeme),
+      rules,
+      decorators,
+      this.getCurrentLocation()
+    );
+  }
+  styleRule() {
+    const selector = this.consume("IDENTIFIER", "Expected CSS selector");
+    this.consume("LEFT_BRACE", 'Expected "{"');
+    const properties = [];
+    while (!this.check("RIGHT_BRACE") && !this.isAtEnd()) {
+      if (this.check("NEWLINE")) {
+        this.advance();
+        continue;
+      }
+      const property = this.styleProperty();
+      if (property) properties.push(property);
+    }
+    this.consume("RIGHT_BRACE", 'Expected "}"');
+    return new StyleRule(
+      selector.lexeme,
+      properties,
+      this.getCurrentLocation()
+    );
+  }
+  styleProperty() {
+    const name = this.consume("IDENTIFIER", "Expected CSS property name");
+    this.consume("COLON", 'Expected ":"');
+    const value = this.expression();
+    this.consume("SEMICOLON", 'Expected ";"');
+    return new StyleProperty(
+      name.lexeme,
+      value,
+      this.getCurrentLocation()
+    );
+  }
   // Statements
   statement() {
     if (this.match("IF")) {
@@ -1133,19 +1268,19 @@ var FluxParser = class _FluxParser {
     return this.assignment();
   }
   assignment() {
-    const expr = this.ternary();
-    if (this.match("ASSIGN", "PLUS_ASSIGN", "MINUS_ASSIGN")) {
+    const expr = this.logicalOr();
+    if (this.match("ASSIGN", "PLUS_ASSIGN", "MINUS_ASSIGN", "MULTIPLY_ASSIGN", "DIVIDE_ASSIGN", "MODULO_ASSIGN")) {
       const operator = this.previous();
       const value = this.assignment();
-      if (expr.type !== "Identifier") {
-        throw new Error("Invalid assignment target");
+      if (expr instanceof Identifier) {
+        return new AssignmentExpression(
+          expr,
+          operator,
+          value,
+          this.getCurrentLocation()
+        );
       }
-      return new AssignmentExpression(
-        expr,
-        operator.lexeme,
-        value,
-        this.getCurrentLocation()
-      );
+      this.error(operator, "Invalid assignment target");
     }
     return expr;
   }
@@ -1349,6 +1484,9 @@ var FluxParser = class _FluxParser {
     }
     if (this.check("JSX_OPEN")) {
       return this.jsxElement();
+    }
+    if (this.check("IDENTIFIER") && this.peekNext() === "ARROW") {
+      return this.arrowFunction();
     }
     throw new Error(`Unexpected token: ${this.peek().lexeme} at line ${this.peek().line}`);
   }

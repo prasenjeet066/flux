@@ -488,6 +488,32 @@ export class TSUnionType extends ASTNode {
   }
 }
 
+// Styles
+export class StylesDeclaration extends ASTNode {
+  constructor(target, rules, decorators, location) {
+    super('StylesDeclaration', location);
+    this.target = target;
+    this.rules = rules;
+    this.decorators = decorators || [];
+  }
+}
+
+export class StyleRule extends ASTNode {
+  constructor(selector, properties, location) {
+    super('StyleRule', location);
+    this.selector = selector;
+    this.properties = properties;
+  }
+}
+
+export class StyleProperty extends ASTNode {
+  constructor(name, value, location) {
+    super('StyleProperty', location);
+    this.name = name;
+    this.value = value;
+  }
+}
+
 // Utility function to create location object
 export function createLocation(startLine, startColumn, endLine, endColumn) {
   return {

@@ -761,16 +761,32 @@ var FluxRuntime = class {
   static navigate(path, replace = false) {
     return this.router.navigate(path, replace);
   }
-  static mount(component, container) {
+  // Component creation and management
+  static createComponent(ComponentClass, props = {}, container = null) {
+    const component = new ComponentClass(props);
+    if (container) {
+      this.mount(component, container);
+    }
+    return component;
+  }
+  static createStore(StoreClass, initialState = {}) {
+    const store = new StoreClass();
+    if (initialState && typeof initialState === "object") {
+      Object.assign(store, initialState);
+    }
+    return store;
+  }
+  // Mount component to DOM
+  static mount(component, selector) {
     if (isBrowser) {
-      if (typeof container === "string") {
-        container = document.querySelector(container);
+      if (typeof selector === "string") {
+        selector = document.querySelector(selector);
       }
-      if (!container) {
+      if (!selector) {
         throw new Error("Container not found");
       }
       const instance = new component();
-      instance.mount(container);
+      instance.mount(selector);
       return instance;
     } else {
       const instance = new component();
@@ -1099,6 +1115,8 @@ var FluxProfiler = {
   }
 };
 var mount = FluxRuntime.mount;
+var createComponent = FluxRuntime.createComponent;
+var createStore = FluxRuntime.createStore;
 export {
   Component,
   FluxCache,
@@ -1109,10 +1127,12 @@ export {
   FluxWebSocket,
   Fragment,
   Store,
+  createComponent,
   createComputed,
   createEffect,
   createElement,
   createReactiveState,
+  createStore,
   mount,
   setCurrentComponent
 };

@@ -417,6 +417,28 @@ var TSUnionType = class extends ASTNode {
     this.types = types;
   }
 };
+var StylesDeclaration = class extends ASTNode {
+  constructor(target, rules, decorators, location) {
+    super("StylesDeclaration", location);
+    this.target = target;
+    this.rules = rules;
+    this.decorators = decorators || [];
+  }
+};
+var StyleRule = class extends ASTNode {
+  constructor(selector, properties, location) {
+    super("StyleRule", location);
+    this.selector = selector;
+    this.properties = properties;
+  }
+};
+var StyleProperty = class extends ASTNode {
+  constructor(name, value, location) {
+    super("StyleProperty", location);
+    this.name = name;
+    this.value = value;
+  }
+};
 function createLocation(startLine, startColumn, endLine, endColumn) {
   return {
     start: { line: startLine, column: startColumn },
@@ -464,6 +486,9 @@ export {
   RouteDeclaration,
   StateDeclaration,
   StoreDeclaration,
+  StyleProperty,
+  StyleRule,
+  StylesDeclaration,
   TSArrayType,
   TSBooleanKeyword,
   TSNumberKeyword,

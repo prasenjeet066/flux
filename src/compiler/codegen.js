@@ -18,6 +18,7 @@ export class FluxCodeGenerator {
     this.componentCount = 0;
     this.storeCount = 0;
     this.errors = [];
+    this.currentContext = 'global'; // 'global', 'component', 'method', 'render'
   }
 
   generate(ast) {
@@ -78,6 +79,8 @@ export class FluxCodeGenerator {
   visitComponentDeclaration(node) {
     const componentName = node.name.name;
     this.componentCount++;
+    
+    this.currentContext = 'component';
     
     this.addLine(`class ${componentName} extends Component {`);
     this.indent++;
@@ -230,16 +233,24 @@ export class FluxCodeGenerator {
   }
 
   visitMethodDeclaration(node) {
-    const name = node.name.name;
-    const asyncKeyword = node.isAsync ? 'async ' : '';
-    const params = node.parameters.map(p => p.name.name).join(', ');
+    this.currentContext = 'method';
     
-    this.addLine(`${asyncKeyword}${name}(${params}) {`);
+    const methodName = node.name.name;
+    const isAsync = node.isAsync;
+    
+    if (isAsync) {
+      this.addLine(`async ${methodName}() {`);
+    } else {
+      this.addLine(`${methodName}() {`);
+    }
+    
     this.indent++;
     this.visit(node.body);
     this.indent--;
-    this.addLine("}");
-    this.addLine("");
+    this.addLine('}');
+    this.addLine('');
+    
+    this.currentContext = 'component';
   }
 
   visitActionDeclaration(node) {
@@ -268,16 +279,18 @@ export class FluxCodeGenerator {
   }
 
   visitRenderDeclaration(node) {
-    this.addLine("render() {");
+    this.currentContext = 'render';
+    
+    this.addLine('render() {');
     this.indent++;
-    this.addLine("return (");
-    this.indent++;
+    this.addLine('return ');
     this.visit(node.body);
+    this.addLine(';');
     this.indent--;
-    this.addLine(");");
-    this.indent--;
-    this.addLine("}");
-    this.addLine("");
+    this.addLine('}');
+    this.addLine('');
+    
+    this.currentContext = 'component';
   }
 
   visitStateDeclaration(node) {
@@ -331,8 +344,9 @@ export class FluxCodeGenerator {
     for (let i = 0; i < node.body.length; i++) {
       this.visit(node.body[i]);
       
-      // Add semicolon for expression statements
-      if (node.body[i].type === 'ExpressionStatement') {
+      // Add semicolon for expression statements, but not for JSX elements
+      if (node.body[i].type === 'ExpressionStatement' && 
+          node.body[i].expression.type !== 'JSXElement') {
         this.add(';');
       }
       
@@ -413,25 +427,19 @@ export class FluxCodeGenerator {
 
   visitAssignmentExpression(node) {
     // Handle reactive state assignments
-    if (node.left.type === 'MemberExpression' && 
-        node.left.object.type === 'Identifier' &&
-        node.left.object.name === 'this') {
-      
-      // Convert this.state = value to this.state.value = value
-      this.add('this.');
-      this.visit(node.left.property);
-      this.add('.value ');
-      this.add(node.operator);
-      this.add(' ');
-      this.visit(node.right);
-    } else if (node.left.type === 'Identifier') {
+    if (node.left.type === 'Identifier') {
       // Handle direct identifier assignments (like count += 1)
       // In Flux, this should be converted to reactive state access
-      this.add(`this.${node.left.name}.value ${node.operator} `);
+      // But preserve the original syntax for method contexts
+      if (this.isInMethodContext() && this.isReactiveState(node.left.name)) {
+        this.add(`this.${node.left.name}.value ${node.operator.lexeme} `);
+      } else {
+        this.add(`${node.left.name} ${node.operator.lexeme} `);
+      }
       this.visit(node.right);
     } else {
       this.visit(node.left);
-      this.add(` ${node.operator} `);
+      this.add(` ${node.operator.lexeme} `);
       this.visit(node.right);
     }
   }
@@ -560,35 +568,24 @@ export class FluxCodeGenerator {
   visitJSXElement(node) {
     this.add('createElement(');
     
-    // Element name
-    if (node.openingElement.name.name.charAt(0).toLowerCase() === node.openingElement.name.name.charAt(0)) {
-      // HTML element
-      this.add(`'${node.openingElement.name.name}'`);
-    } else {
-      // Component
-      this.add(node.openingElement.name.name);
-    }
+    // Get the element name from the opening element
+    const elementName = node.openingElement.name.name;
+    this.add(JSON.stringify(elementName));
     
-    // Props
-    if (node.openingElement.attributes.length > 0) {
+    // Attributes
+    if (node.openingElement.attributes && node.openingElement.attributes.length > 0) {
       this.add(', {');
-      
       for (let i = 0; i < node.openingElement.attributes.length; i++) {
-        const attr = node.openingElement.attributes[i];
-        this.visitJSXAttribute(attr);
-        
-        if (i < node.openingElement.attributes.length - 1) {
-          this.add(', ');
-        }
+        if (i > 0) this.add(', ');
+        this.visit(node.openingElement.attributes[i]);
       }
-      
       this.add('}');
     } else {
       this.add(', null');
     }
     
     // Children
-    if (node.children.length > 0) {
+    if (node.children && node.children.length > 0) {
       for (const child of node.children) {
         this.add(', ');
         
@@ -622,6 +619,76 @@ export class FluxCodeGenerator {
     }
   }
 
+  visitArrowFunction(node) {
+    this.add('(');
+    if (node.params.length > 0) {
+      this.add(node.params.map(param => param.lexeme || param.name).join(', '));
+    }
+    this.add(') => ');
+    
+    if (node.body.type === 'Block') {
+      this.visit(node.body);
+    } else {
+      this.visit(node.body);
+    }
+  }
+
+  visitArrayLiteral(node) {
+    this.add('[');
+    if (node.elements.length > 0) {
+      for (let i = 0; i < node.elements.length; i++) {
+        if (i > 0) this.add(', ');
+        this.visit(node.elements[i]);
+      }
+    }
+    this.add(']');
+  }
+
+  visitObjectLiteral(node) {
+    this.add('{');
+    if (node.properties.length > 0) {
+      for (let i = 0; i < node.properties.length; i++) {
+        if (i > 0) this.add(', ');
+        const prop = node.properties[i];
+        this.add(`${prop.key.lexeme || prop.key.name}: `);
+        this.visit(prop.value);
+      }
+    }
+    this.add('}');
+  }
+
+  visitStylesDeclaration(node) {
+    this.addLine(`// Styles for ${node.target.name}`);
+    this.addLine('const styles = {');
+    this.indent++;
+    
+    for (const rule of node.rules) {
+      this.visit(rule);
+    }
+    
+    this.indent--;
+    this.addLine('};');
+    this.addLine('');
+  }
+
+  visitStyleRule(node) {
+    this.add(`${node.selector}: {`);
+    this.indent++;
+    
+    for (const property of node.properties) {
+      this.visit(property);
+    }
+    
+    this.indent--;
+    this.addLine('},');
+  }
+
+  visitStyleProperty(node) {
+    this.add(`${node.name}: `);
+    this.visit(node.value);
+    this.addLine(',');
+  }
+
   visitJSXExpressionContainer(node) {
     this.visit(node.expression);
   }
@@ -631,21 +698,27 @@ export class FluxCodeGenerator {
   }
 
   // Utility methods
+  isInMethodContext() {
+    return this.currentContext === 'method';
+  }
+
   isInRenderContext() {
-    // Simple heuristic - in a real implementation, we'd track context properly
-    return true;
+    return this.currentContext === 'render';
   }
 
   isReactiveState(name) {
-    // Check if this identifier refers to a reactive state variable
+    // Check if this identifier refers to reactive state
     // In a real implementation, we'd have proper scope tracking
-    // For now, only treat identifiers that are likely state variables
     const nonStateIdentifiers = [
       'increment', 'decrement', 'handleClick', 'handleSubmit', 'updateName',
       'console', 'log', 'Math', 'Date', 'Array', 'Object', 'String', 'Number',
       'Boolean', 'parseInt', 'parseFloat', 'isNaN', 'isFinite',
-      'title', 'count' // Props should not be treated as reactive state
+      // Props should not be treated as reactive state
+      'title'
     ];
+    
+    // For now, assume all identifiers in render context are reactive state
+    // unless they're explicitly excluded
     return !nonStateIdentifiers.includes(name);
   }
 
