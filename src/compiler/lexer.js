@@ -47,6 +47,7 @@ export class FluxLexer {
     TRY: 'TRY',
     CATCH: 'CATCH',
     FINALLY: 'FINALLY',
+    ON: 'ON',
     
     // Operators
     ASSIGN: 'ASSIGN',
@@ -86,6 +87,9 @@ export class FluxLexer {
     JSX_SELF_CLOSE: 'JSX_SELF_CLOSE',
     JSX_TEXT: 'JSX_TEXT',
     
+    // Arrow function
+    ARROW: 'ARROW',
+    
     // Decorators
     AT: 'AT',
     
@@ -112,6 +116,7 @@ export class FluxLexer {
     'use': 'USE',
     'import': 'IMPORT',
     'export': 'EXPORT',
+    'on': 'ON',
     'async': 'ASYNC',
     'await': 'AWAIT',
     'if': 'IF',
@@ -216,10 +221,13 @@ export class FluxLexer {
         );
         break;
       case '=':
-        this.addToken(this.match('=') ? 
-          FluxLexer.TOKEN_TYPES.EQUALS : 
-          FluxLexer.TOKEN_TYPES.ASSIGN
-        );
+        if (this.match('=')) {
+          this.addToken(FluxLexer.TOKEN_TYPES.EQUALS);
+        } else if (this.match('>')) {
+          this.addToken(FluxLexer.TOKEN_TYPES.ARROW);
+        } else {
+          this.addToken(FluxLexer.TOKEN_TYPES.ASSIGN);
+        }
         break;
       case '<':
         if (this.peek() === '/') {

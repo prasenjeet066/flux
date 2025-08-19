@@ -726,6 +726,33 @@ export class FluxParser {
           false, // not computed
           this.getCurrentLocation()
         );
+      } else if (this.match('ARROW')) {
+        // Arrow function
+        const params = [];
+        if (this.check('LEFT_PAREN')) {
+          this.advance(); // consume '('
+          if (!this.check('RIGHT_PAREN')) {
+            do {
+              params.push(this.consume('IDENTIFIER', 'Expected parameter name'));
+            } while (this.match('COMMA'));
+          }
+          this.consume('RIGHT_PAREN', 'Expected ")" after parameters');
+        } else {
+          params.push(this.consume('IDENTIFIER', 'Expected parameter name'));
+        }
+        
+        let body;
+        if (this.check('LEFT_BRACE')) {
+          body = this.blockStatement();
+        } else {
+          body = this.expression();
+        }
+        
+        expr = new AST.ArrowFunctionExpression(
+          params.map(p => new AST.Identifier(p.lexeme)),
+          body,
+          this.getCurrentLocation()
+        );
       } else {
         break;
       }
