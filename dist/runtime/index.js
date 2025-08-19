@@ -1098,10 +1098,9 @@ var FluxProfiler = {
     return result;
   }
 };
+var mount = FluxRuntime.mount;
 export {
   Component,
-  Computed,
-  Effect,
   FluxCache,
   FluxDevTools,
   FluxGlobalState,
@@ -1109,15 +1108,12 @@ export {
   FluxRuntime,
   FluxWebSocket,
   Fragment,
-  ReactiveState,
-  Router,
   Store,
-  VNode,
-  VirtualDOM,
   createComputed,
   createEffect,
   createElement,
   createReactiveState,
+  mount,
   setCurrentComponent
 };
 //# sourceMappingURL=index.js.map

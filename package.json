@@ -56,7 +56,7 @@
     "url": "https://github.com/flux-lang/flux.git"
   },
   "publishConfig": {
-    "@prasenjeet066:registry": "https://npm.pkg.github.com"
+    "registry": "https://registry.npmjs.org/"
   },
   "bugs": {
     "url": "https://github.com/flux-lang/flux/issues"
