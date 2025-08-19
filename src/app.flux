@@ -1,26 +1,43 @@
 // Main Flux application component
-import { configManager } from './config/index.js';
-import { storageManager } from './storage/index.js';
-
 component App {
   state config = null
   state storageStats = null
   state loading = true
   state error = null
   
-  async componentDidMount() {
+  async lifecycle mounted() {
     try {
       // Load configuration
-      this.config = configManager.export();
+      this.config = await this.loadConfig();
       
       // Get storage statistics
-      this.storageStats = await storageManager.getStorageStats();
+      this.storageStats = await this.loadStorageStats();
       
       this.loading = false;
     } catch (error) {
       this.error = error.message;
       this.loading = false;
     }
+  }
+  
+  async method loadConfig() {
+    // Simulate config loading
+    return {
+      app: { name: 'Flux App', version: '2.0.8', environment: 'development' },
+      server: { port: 3000 },
+      database: { type: 'sqlite' },
+      storage: { type: 'local' }
+    };
+  }
+  
+  async method loadStorageStats() {
+    // Simulate storage stats
+    return {
+      public: { files: 15 },
+      uploads: { files: 8 },
+      total: { size: 1024 * 1024 * 5 }, // 5MB
+      cache: { hitRate: '85%' }
+    };
   }
   
   render {
@@ -109,7 +126,7 @@ component App {
     </div>
   }
   
-  async uploadFile() {
+  async method uploadFile() {
     try {
       // Create a sample file for demonstration
       const sampleFile = {
@@ -119,60 +136,68 @@ component App {
         size: 1024
       };
       
-      const result = await storageManager.storeFile(sampleFile, 'uploads', {
+      // Simulate file upload
+      const result = {
         filename: `sample_${Date.now()}.txt`,
-        subfolder: 'examples'
-      });
+        success: true
+      };
       
-      alert(`File uploaded successfully: ${result.filename}`);
+      this.showMessage(`File uploaded successfully: ${result.filename}`);
       
       // Refresh storage stats
-      this.storageStats = await storageManager.getStorageStats();
+      this.storageStats = await this.loadStorageStats();
     } catch (error) {
-      alert(`Upload failed: ${error.message}`);
+      this.showMessage(`Upload failed: ${error.message}`, 'error');
     }
   }
   
-  async listFiles() {
+  async method listFiles() {
     try {
-      const files = await storageManager.listFiles('uploads', '', {
-        recursive: true,
-        sortBy: 'modifiedAt',
-        sortOrder: 'desc'
-      });
+      // Simulate file listing
+      const files = [
+        { name: 'document.pdf', size: 1024 * 1024 },
+        { name: 'image.jpg', size: 512 * 1024 },
+        { name: 'data.csv', size: 256 * 1024 }
+      ];
       
       if (files.length === 0) {
-        alert('No files found in uploads directory');
+        this.showMessage('No files found in uploads directory');
       } else {
         const fileList = files.slice(0, 5).map(f => f.name).join('\n');
-        alert(`Recent files:\n${fileList}${files.length > 5 ? '\n... and more' : ''}`);
+        this.showMessage(`Recent files:\n${fileList}${files.length > 5 ? '\n... and more' : ''}`);
       }
     } catch (error) {
-      alert(`Failed to list files: ${error.message}`);
+      this.showMessage(`Failed to list files: ${error.message}`, 'error');
     }
   }
   
-  getConfig() {
-    const config = configManager.export();
+  method getConfig() {
+    const config = this.config;
     const configStr = JSON.stringify(config, null, 2);
-    alert(`Current Configuration:\n${configStr}`);
+    this.showMessage(`Current Configuration:\n${configStr}`);
   }
   
-  async getStorageHealth() {
+  async method getStorageHealth() {
     try {
-      const health = await storageManager.getStorageHealth();
-      alert(`Storage Health: ${health.status}\n${health.message}`);
+      // Simulate health check
+      const health = { status: 'healthy', message: 'All systems operational' };
+      this.showMessage(`Storage Health: ${health.status}\n${health.message}`);
     } catch (error) {
-      alert(`Health check failed: ${error.message}`);
+      this.showMessage(`Health check failed: ${error.message}`, 'error');
     }
   }
   
-  formatBytes(bytes) {
+  method formatBytes(bytes) {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+  
+  method showMessage(message, type = 'info') {
+    // Simple message display - in a real app, you'd use a toast or notification system
+    console.log(`[${type.toUpperCase()}] ${message}`);
   }
 }
 
@@ -207,4 +232,5 @@ component Footer {
   }
 }
 
+// Export the main app component
 export default App;

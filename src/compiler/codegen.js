@@ -10,7 +10,7 @@ export class FluxCodeGenerator {
       minify: false,
       sourceMaps: true,
       optimizations: true,
-      ...options
+      ...options,
     };
     this.indent = 0;
     this.output = [];
@@ -23,14 +23,14 @@ export class FluxCodeGenerator {
   generate(ast) {
     this.output = [];
     this.indent = 0;
-    
+
     // Add runtime imports
-    this.addLine("import { FluxRuntime, Component, Store, createReactiveState, createEffect, createComputed, createComponent, createStore } from '../runtime/index.js';");
-    this.addLine("import { createElement, Fragment } from '../runtime/index.js';");
-    this.addLine("");
-    
+    this.addLine('import { FluxRuntime, Component, Store, createReactiveState, createEffect, createComputed, createComponent, createStore } from \'../runtime/index.js\';');
+    this.addLine('import { createElement, Fragment } from \'../runtime/index.js\';');
+    this.addLine('');
+
     this.visit(ast);
-    
+
     return this.output.join('\n');
   }
 
@@ -39,7 +39,7 @@ export class FluxCodeGenerator {
     if (this[methodName]) {
       return this[methodName](node);
     }
-    
+
     console.warn(`No visitor method for ${node.type}`);
     return '';
   }
@@ -47,7 +47,7 @@ export class FluxCodeGenerator {
   visitProgram(node) {
     for (const statement of node.body) {
       this.visit(statement);
-      this.addLine("");
+      this.addLine('');
     }
   }
 
@@ -56,116 +56,116 @@ export class FluxCodeGenerator {
       if (spec.imported.name === 'default') {
         return spec.local.name;
       }
-      return spec.imported.name === spec.local.name 
-        ? spec.imported.name 
+      return spec.imported.name === spec.local.name
+        ? spec.imported.name
         : `${spec.imported.name} as ${spec.local.name}`;
     }).join(', ');
-    
+
     this.addLine(`import { ${specifiers} } from ${JSON.stringify(node.source.value)};`);
   }
 
   visitExportDeclaration(node) {
-    this.add("export ");
+    this.add('export ');
     this.visit(node.declaration);
   }
 
   visitComponentDeclaration(node) {
     const componentName = node.name.name;
     this.componentCount++;
-    
+
     this.addLine(`class ${componentName} extends Component {`);
     this.indent++;
-    
+
     // Constructor
-    this.addLine("constructor(props = {}) {");
+    this.addLine('constructor(props = {}) {');
     this.indent++;
-    this.addLine("super(props);");
-    this.addLine("");
-    
+    this.addLine('super(props);');
+    this.addLine('');
+
     // Initialize props
     if (node.props.length > 0) {
-      this.addLine("// Initialize props");
+      this.addLine('// Initialize props');
       for (const propDecl of node.props) {
         const name = propDecl.name.name;
-        const defaultValue = propDecl.defaultValue 
-          ? this.visit(propDecl.defaultValue) 
+        const defaultValue = propDecl.defaultValue
+          ? this.visit(propDecl.defaultValue)
           : 'undefined';
-        
+
         this.addLine(`this.${name} = props.${name} !== undefined ? props.${name} : ${defaultValue};`);
       }
-      this.addLine("");
+      this.addLine('');
     }
-    
+
     // Initialize state
     if (node.state.length > 0) {
-      this.addLine("// Initialize state");
+      this.addLine('// Initialize state');
       for (const stateDecl of node.state) {
         const name = stateDecl.name.name;
-        const initialValue = stateDecl.initialValue 
-          ? this.visit(stateDecl.initialValue) 
+        const initialValue = stateDecl.initialValue
+          ? this.visit(stateDecl.initialValue)
           : 'null';
-        
+
         this.addLine(`this.${name} = createReactiveState(${initialValue});`);
       }
-      this.addLine("");
+      this.addLine('');
     }
-    
+
     // Initialize computed properties
     if (node.computed.length > 0) {
-      this.addLine("// Initialize computed properties");
+      this.addLine('// Initialize computed properties');
       for (const computedDecl of node.computed) {
         const name = computedDecl.name.name;
         this.addLine(`this.${name} = createComputed(() => {`);
         this.indent++;
         this.visit(computedDecl.body);
         this.indent--;
-        this.addLine("});");
+        this.addLine('});');
       }
-      this.addLine("");
+      this.addLine('');
     }
-    
+
     // Initialize effects
     if (node.effects.length > 0) {
-      this.addLine("// Initialize effects");
+      this.addLine('// Initialize effects');
       for (let i = 0; i < node.effects.length; i++) {
         const effect = node.effects[i];
         const deps = effect.dependencies.map(dep => this.visit(dep)).join(', ');
-        
+
         this.addLine(`this.effect${i} = createEffect(() => {`);
         this.indent++;
         this.visit(effect.body);
         this.indent--;
         this.addLine(`}, [${deps}]);`);
       }
-      this.addLine("");
+      this.addLine('');
     }
-    
+
     this.indent--;
-    this.addLine("}");
-    this.addLine("");
-    
+    this.addLine('}');
+    this.addLine('');
+
     // Generate methods
     for (const method of node.methods) {
       this.visitMethodDeclaration(method);
     }
-    
+
     // Generate lifecycle methods
     for (const lifecycle of node.lifecycle) {
       this.visitLifecycleDeclaration(lifecycle);
     }
-    
+
     // Generate render method
     if (node.render) {
       this.visitRenderDeclaration(node.render);
     }
-    
+
     this.indent--;
-    this.addLine("}");
-    this.addLine("");
-    
+    this.addLine('}');
+    this.addLine('');
+
     // Add component registration
     this.addLine(`${componentName}.displayName = '${componentName}';`);
-    
+
     // Handle route decorators
     const routeDecorator = node.decorators.find(d => d.name.name === 'route');
     if (routeDecorator) {
@@ -177,57 +177,57 @@ export class FluxCodeGenerator {
   visitStoreDeclaration(node) {
     const storeName = node.name.name;
     this.storeCount++;
-    
+
     this.addLine(`class ${storeName} extends Store {`);
     this.indent++;
-    
+
     // Constructor
-    this.addLine("constructor() {");
+    this.addLine('constructor() {');
     this.indent++;
-    this.addLine("super();");
-    this.addLine("");
-    
+    this.addLine('super();');
+    this.addLine('');
+
     // Initialize state
     if (node.state.length > 0) {
-      this.addLine("// Initialize state");
+      this.addLine('// Initialize state');
       for (const stateDecl of node.state) {
         const name = stateDecl.name.name;
-        const initialValue = stateDecl.initialValue 
-          ? this.visit(stateDecl.initialValue) 
+        const initialValue = stateDecl.initialValue
+          ? this.visit(stateDecl.initialValue)
           : 'null';
-        
+
         this.addLine(`this.${name} = createReactiveState(${initialValue});`);
       }
-      this.addLine("");
+      this.addLine('');
     }
-    
+
     // Initialize computed properties
     if (node.computed.length > 0) {
-      this.addLine("// Initialize computed properties");
+      this.addLine('// Initialize computed properties');
       for (const computedDecl of node.computed) {
         const name = computedDecl.name.name;
         this.addLine(`this.${name} = createComputed(() => {`);
         this.indent++;
         this.visit(computedDecl.body);
         this.indent--;
-        this.addLine("});");
+        this.addLine('});');
       }
-      this.addLine("");
+      this.addLine('');
     }
-    
+
     this.indent--;
-    this.addLine("}");
-    this.addLine("");
-    
+    this.addLine('}');
+    this.addLine('');
+
     // Generate actions
     for (const action of node.actions) {
       this.visitActionDeclaration(action);
     }
-    
+
     this.indent--;
-    this.addLine("}");
-    this.addLine("");
-    
+    this.addLine('}');
+    this.addLine('');
+
     // Create singleton instance
     this.addLine(`const ${storeName}Instance = new ${storeName}();`);
     this.addLine(`export { ${storeName}Instance as ${storeName} };`);
@@ -237,64 +237,64 @@ export class FluxCodeGenerator {
     const name = node.name.name;
     const asyncKeyword = node.isAsync ? 'async ' : '';
     const params = node.parameters.map(p => p.name.name).join(', ');
-    
+
     this.addLine(`${asyncKeyword}${name}(${params}) {`);
     this.indent++;
     this.visit(node.body);
     this.indent--;
-    this.addLine("}");
-    this.addLine("");
+    this.addLine('}');
+    this.addLine('');
   }
 
   visitActionDeclaration(node) {
     const name = node.name.name;
     const asyncKeyword = node.isAsync ? 'async ' : '';
     const params = node.parameters.map(p => p.name.name).join(', ');
-    
+
     this.addLine(`${asyncKeyword}${name}(${params}) {`);
     this.indent++;
     this.visit(node.body);
     this.indent--;
-    this.addLine("}");
-    this.addLine("");
+    this.addLine('}');
+    this.addLine('');
   }
 
   visitLifecycleDeclaration(node) {
     const phase = node.phase;
     const asyncKeyword = node.isAsync ? 'async ' : '';
-    
+
     this.addLine(`${asyncKeyword}${phase}() {`);
     this.indent++;
     this.visit(node.body);
     this.indent--;
-    this.addLine("}");
-    this.addLine("");
+    this.addLine('}');
+    this.addLine('');
   }
 
   visitRenderDeclaration(node) {
-    this.addLine("render() {");
+    this.addLine('render() {');
     this.indent++;
-    this.addLine("return (");
+    this.addLine('return (');
     this.indent++;
     this.visit(node.body);
     this.indent--;
-    this.addLine(");");
+    this.addLine(');');
     this.indent--;
-    this.addLine("}");
-    this.addLine("");
+    this.addLine('}');
+    this.addLine('');
   }
 
   visitBlockStatement(node) {
     for (let i = 0; i < node.body.length; i++) {
       this.visit(node.body[i]);
-      
+
       // Add semicolon for expression statements
       if (node.body[i].type === 'ExpressionStatement') {
         this.add(';');
       }
-      
+
       if (i < node.body.length - 1) {
-        this.addLine("");
+        this.addLine('');
       }
     }
   }
@@ -309,7 +309,7 @@ export class FluxCodeGenerator {
     this.visit(node.test);
     this.add(') ');
     this.visit(node.consequent);
-    
+
     if (node.alternate) {
       this.add(' else ');
       this.visit(node.alternate);
@@ -345,12 +345,12 @@ export class FluxCodeGenerator {
   visitTryStatement(node) {
     this.add(`${this.getIndent()}try `);
     this.visit(node.block);
-    
+
     if (node.handler) {
       this.add(` catch (${node.handler.param.name}) `);
       this.visit(node.handler.body);
     }
-    
+
     if (node.finalizer) {
       this.add(' finally ');
       this.visit(node.finalizer);
@@ -370,10 +370,10 @@ export class FluxCodeGenerator {
 
   visitAssignmentExpression(node) {
     // Handle reactive state assignments
-    if (node.left.type === 'MemberExpression' && 
+    if (node.left.type === 'MemberExpression' &&
         node.left.object.type === 'Identifier' &&
         node.left.object.name === 'this') {
-      
+
       // Convert this.state = value to this.state.value = value
       this.add('this.');
       this.visit(node.left.property);
@@ -391,20 +391,20 @@ export class FluxCodeGenerator {
   visitCallExpression(node) {
     this.visit(node.callee);
     this.add('(');
-    
+
     for (let i = 0; i < node.arguments.length; i++) {
       this.visit(node.arguments[i]);
       if (i < node.arguments.length - 1) {
         this.add(', ');
       }
     }
-    
+
     this.add(')');
   }
 
   visitMemberExpression(node) {
     this.visit(node.object);
-    
+
     if (node.computed) {
       this.add('[');
       this.visit(node.property);
@@ -425,37 +425,37 @@ export class FluxCodeGenerator {
 
   visitArrayExpression(node) {
     this.add('[');
-    
+
     for (let i = 0; i < node.elements.length; i++) {
       this.visit(node.elements[i]);
       if (i < node.elements.length - 1) {
         this.add(', ');
       }
     }
-    
+
     this.add(']');
   }
 
   visitObjectExpression(node) {
     this.add('{');
-    
+
     if (node.properties.length > 0) {
-      this.addLine("");
+      this.addLine('');
       this.indent++;
-      
+
       for (let i = 0; i < node.properties.length; i++) {
         this.add(this.getIndent());
         this.visit(node.properties[i]);
         if (i < node.properties.length - 1) {
           this.add(',');
         }
-        this.addLine("");
+        this.addLine('');
       }
-      
+
       this.indent--;
       this.add(this.getIndent());
     }
-    
+
     this.add('}');
   }
 
@@ -484,7 +484,7 @@ export class FluxCodeGenerator {
 
   visitJSXElement(node) {
     this.add('createElement(');
-    
+
     // Element name
     if (node.openingElement.name.name.charAt(0).toLowerCase() === node.openingElement.name.name.charAt(0)) {
       // HTML element
@@ -493,23 +493,23 @@ export class FluxCodeGenerator {
       // Component
       this.add(node.openingElement.name.name);
     }
-    
+
     // Props
     if (node.openingElement.attributes.length > 0) {
       this.add(', {');
-      
+
       for (let i = 0; i < node.openingElement.attributes.length; i++) {
         const attr = node.openingElement.attributes[i];
-        
+
         // Handle event attributes (@click -> onClick)
         let attrName = attr.name && attr.name.name ? attr.name.name : 'unknown';
         if (attrName.startsWith('@')) {
           const eventName = attrName.substring(1);
-          attrName = 'on' + eventName.charAt(0).toUpperCase() + eventName.slice(1);
+          attrName = `on${eventName.charAt(0).toUpperCase()}${eventName.slice(1)}`;
         }
-        
+
         this.add(`${attrName}: `);
-        
+
         if (attr.value && attr.value.type === 'JSXExpressionContainer') {
           this.visit(attr.value.expression);
         } else if (attr.value) {
@@ -517,22 +517,22 @@ export class FluxCodeGenerator {
         } else {
           this.add('true');
         }
-        
+
         if (i < node.openingElement.attributes.length - 1) {
           this.add(', ');
         }
       }
-      
+
       this.add('}');
     } else {
       this.add(', null');
     }
-    
+
     // Children
     if (node.children.length > 0) {
       for (const child of node.children) {
         this.add(', ');
-        
+
         if (child.type === 'JSXText') {
           this.add(JSON.stringify(child.value));
         } else if (child.type === 'JSXExpressionContainer') {
@@ -542,7 +542,7 @@ export class FluxCodeGenerator {
         }
       }
     }
-    
+
     this.add(')');
   }
 
@@ -567,9 +567,9 @@ export class FluxCodeGenerator {
       }
       this.add(')');
     }
-    
+
     this.add(' => ');
-    
+
     if (node.body.type === 'BlockStatement') {
       this.visit(node.body);
     } else {
@@ -584,14 +584,14 @@ export class FluxCodeGenerator {
       this.visit(node.id);
     }
     this.add('(');
-    
+
     for (let i = 0; i < node.params.length; i++) {
       this.visit(node.params[i]);
       if (i < node.params.length - 1) {
         this.add(', ');
       }
     }
-    
+
     this.add(') ');
     this.visit(node.body);
   }
@@ -600,14 +600,6 @@ export class FluxCodeGenerator {
     this.visit(node.left);
     this.add(` ${node.operator} `);
     this.visit(node.right);
-  }
-
-  visitConditionalExpression(node) {
-    this.visit(node.test);
-    this.add(' ? ');
-    this.visit(node.consequent);
-    this.add(' : ');
-    this.visit(node.alternate);
   }
 
   // Utility methods
@@ -626,8 +618,8 @@ export class FluxCodeGenerator {
     this.output.push(text);
   }
 
-  addLine(text = "") {
-    this.output.push(text + '\n');
+  addLine(text = '') {
+    this.output.push(`${text}\n`);
   }
 
   getIndent() {
@@ -642,17 +634,17 @@ export class FluxOptimizer {
       this.eliminateDeadCode,
       this.inlineConstants,
       this.optimizeReactiveUpdates,
-      this.bundleComponents
+      this.bundleComponents,
     ];
   }
 
   optimize(ast) {
     let optimizedAst = ast;
-    
+
     for (const optimization of this.optimizations) {
       optimizedAst = optimization(optimizedAst);
     }
-    
+
     return optimizedAst;
   }
 

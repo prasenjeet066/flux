@@ -43,6 +43,7 @@ var FluxLexer = class _FluxLexer {
     TRY: "TRY",
     CATCH: "CATCH",
     FINALLY: "FINALLY",
+    ON: "ON",
     // Operators
     ASSIGN: "ASSIGN",
     PLUS_ASSIGN: "PLUS_ASSIGN",
@@ -78,6 +79,8 @@ var FluxLexer = class _FluxLexer {
     JSX_CLOSE: "JSX_CLOSE",
     JSX_SELF_CLOSE: "JSX_SELF_CLOSE",
     JSX_TEXT: "JSX_TEXT",
+    // Arrow function
+    ARROW: "ARROW",
     // Decorators
     AT: "AT",
     // Special
@@ -102,6 +105,7 @@ var FluxLexer = class _FluxLexer {
     "use": "USE",
     "import": "IMPORT",
     "export": "EXPORT",
+    "on": "ON",
     "async": "ASYNC",
     "await": "AWAIT",
     "if": "IF",
@@ -196,9 +200,13 @@ var FluxLexer = class _FluxLexer {
         );
         break;
       case "=":
-        this.addToken(
-          this.match("=") ? _FluxLexer.TOKEN_TYPES.EQUALS : _FluxLexer.TOKEN_TYPES.ASSIGN
-        );
+        if (this.match("=")) {
+          this.addToken(_FluxLexer.TOKEN_TYPES.EQUALS);
+        } else if (this.match(">")) {
+          this.addToken(_FluxLexer.TOKEN_TYPES.ARROW);
+        } else {
+          this.addToken(_FluxLexer.TOKEN_TYPES.ASSIGN);
+        }
         break;
       case "<":
         if (this.peek() === "/") {

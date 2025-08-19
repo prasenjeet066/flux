@@ -43,6 +43,7 @@ var FluxLexer = class _FluxLexer {
     TRY: "TRY",
     CATCH: "CATCH",
     FINALLY: "FINALLY",
+    ON: "ON",
     // Operators
     ASSIGN: "ASSIGN",
     PLUS_ASSIGN: "PLUS_ASSIGN",
@@ -78,6 +79,8 @@ var FluxLexer = class _FluxLexer {
     JSX_CLOSE: "JSX_CLOSE",
     JSX_SELF_CLOSE: "JSX_SELF_CLOSE",
     JSX_TEXT: "JSX_TEXT",
+    // Arrow function
+    ARROW: "ARROW",
     // Decorators
     AT: "AT",
     // Special
@@ -102,6 +105,7 @@ var FluxLexer = class _FluxLexer {
     "use": "USE",
     "import": "IMPORT",
     "export": "EXPORT",
+    "on": "ON",
     "async": "ASYNC",
     "await": "AWAIT",
     "if": "IF",
@@ -196,9 +200,13 @@ var FluxLexer = class _FluxLexer {
         );
         break;
       case "=":
-        this.addToken(
-          this.match("=") ? _FluxLexer.TOKEN_TYPES.EQUALS : _FluxLexer.TOKEN_TYPES.ASSIGN
-        );
+        if (this.match("=")) {
+          this.addToken(_FluxLexer.TOKEN_TYPES.EQUALS);
+        } else if (this.match(">")) {
+          this.addToken(_FluxLexer.TOKEN_TYPES.ARROW);
+        } else {
+          this.addToken(_FluxLexer.TOKEN_TYPES.ASSIGN);
+        }
         break;
       case "<":
         if (this.peek() === "/") {
@@ -716,6 +724,13 @@ var TSBooleanKeyword = class extends ASTNode {
     super("TSBooleanKeyword", location);
   }
 };
+var ArrowFunctionExpression = class extends ASTNode {
+  constructor(params, body, location) {
+    super("ArrowFunctionExpression", location);
+    this.params = params;
+    this.body = body;
+  }
+};
 function createLocation(startLine, startColumn, endLine, endColumn) {
   return {
     start: { line: startLine, column: startColumn },
@@ -918,7 +933,7 @@ var FluxParser = class _FluxParser {
     );
   }
   effectDeclaration() {
-    let dependencies = [];
+    const dependencies = [];
     if (this.match("ON")) {
       dependencies.push(this.expression());
       while (this.match("COMMA")) {
@@ -1288,6 +1303,30 @@ var FluxParser = class _FluxParser {
           // not computed
           this.getCurrentLocation()
         );
+      } else if (this.match("ARROW")) {
+        const params = [];
+        if (this.check("LEFT_PAREN")) {
+          this.advance();
+          if (!this.check("RIGHT_PAREN")) {
+            do {
+              params.push(this.consume("IDENTIFIER", "Expected parameter name"));
+            } while (this.match("COMMA"));
+          }
+          this.consume("RIGHT_PAREN", 'Expected ")" after parameters');
+        } else {
+          params.push(this.consume("IDENTIFIER", "Expected parameter name"));
+        }
+        let body;
+        if (this.check("LEFT_BRACE")) {
+          body = this.blockStatement();
+        } else {
+          body = this.expression();
+        }
+        expr = new ArrowFunctionExpression(
+          params.map((p) => new Identifier(p.lexeme)),
+          body,
+          this.getCurrentLocation()
+        );
       } else {
         break;
       }
@@ -1404,7 +1443,7 @@ var FluxParser = class _FluxParser {
     if (this.check("AT")) {
       this.advance();
       const eventName = this.consume("IDENTIFIER", "Expected event name after @");
-      name = new Identifier("@" + eventName.lexeme);
+      name = new Identifier(`@${eventName.lexeme}`);
     } else {
       const attrName = this.consume("IDENTIFIER", "Expected attribute name");
       name = new Identifier(attrName.lexeme);

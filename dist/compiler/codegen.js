@@ -19,8 +19,8 @@ var FluxCodeGenerator = class {
   generate(ast) {
     this.output = [];
     this.indent = 0;
-    this.addLine("import { FluxRuntime, Component, Store, createReactiveState, createEffect, createComputed } from '@flux/runtime';");
-    this.addLine("import { createElement, Fragment } from '@flux/jsx';");
+    this.addLine("import { FluxRuntime, Component, Store, createReactiveState, createEffect, createComputed, createComponent, createStore } from '../runtime/index.js';");
+    this.addLine("import { createElement, Fragment } from '../runtime/index.js';");
     this.addLine("");
     this.visit(ast);
     return this.output.join("\n");
@@ -61,6 +61,15 @@ var FluxCodeGenerator = class {
     this.indent++;
     this.addLine("super(props);");
     this.addLine("");
+    if (node.props.length > 0) {
+      this.addLine("// Initialize props");
+      for (const propDecl of node.props) {
+        const name = propDecl.name.name;
+        const defaultValue = propDecl.defaultValue ? this.visit(propDecl.defaultValue) : "undefined";
+        this.addLine(`this.${name} = props.${name} !== undefined ? props.${name} : ${defaultValue};`);
+      }
+      this.addLine("");
+    }
     if (node.state.length > 0) {
       this.addLine("// Initialize state");
       for (const stateDecl of node.state) {
@@ -373,11 +382,18 @@ var FluxCodeGenerator = class {
       this.add(", {");
       for (let i = 0; i < node.openingElement.attributes.length; i++) {
         const attr = node.openingElement.attributes[i];
-        this.add(`${attr.name.name}: `);
-        if (attr.value.type === "JSXExpressionContainer") {
+        let attrName = attr.name && attr.name.name ? attr.name.name : "unknown";
+        if (attrName.startsWith("@")) {
+          const eventName = attrName.substring(1);
+          attrName = `on${eventName.charAt(0).toUpperCase()}${eventName.slice(1)}`;
+        }
+        this.add(`${attrName}: `);
+        if (attr.value && attr.value.type === "JSXExpressionContainer") {
           this.visit(attr.value.expression);
-        } else {
+        } else if (attr.value) {
           this.visit(attr.value);
+        } else {
+          this.add("true");
         }
         if (i < node.openingElement.attributes.length - 1) {
           this.add(", ");
@@ -407,6 +423,47 @@ var FluxCodeGenerator = class {
   visitJSXText(node) {
     this.add(JSON.stringify(node.value));
   }
+  visitArrowFunctionExpression(node) {
+    if (node.params.length === 1 && node.params[0].type === "Identifier") {
+      this.visit(node.params[0]);
+    } else {
+      this.add("(");
+      for (let i = 0; i < node.params.length; i++) {
+        this.visit(node.params[i]);
+        if (i < node.params.length - 1) {
+          this.add(", ");
+        }
+      }
+      this.add(")");
+    }
+    this.add(" => ");
+    if (node.body.type === "BlockStatement") {
+      this.visit(node.body);
+    } else {
+      this.visit(node.body);
+    }
+  }
+  visitFunctionExpression(node) {
+    this.add("function");
+    if (node.id) {
+      this.add(" ");
+      this.visit(node.id);
+    }
+    this.add("(");
+    for (let i = 0; i < node.params.length; i++) {
+      this.visit(node.params[i]);
+      if (i < node.params.length - 1) {
+        this.add(", ");
+      }
+    }
+    this.add(") ");
+    this.visit(node.body);
+  }
+  visitLogicalExpression(node) {
+    this.visit(node.left);
+    this.add(` ${node.operator} `);
+    this.visit(node.right);
+  }
   // Utility methods
   isInRenderContext() {
     return true;
@@ -418,7 +475,8 @@ var FluxCodeGenerator = class {
     this.output.push(text);
   }
   addLine(text = "") {
-    this.output.push(text + "\n");
+    this.output.push(`${text}
+`);
   }
   getIndent() {
     return "  ".repeat(this.indent);

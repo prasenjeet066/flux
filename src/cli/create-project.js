@@ -24,7 +24,7 @@ const TEMPLATES = {
   appDir: '.flux',
   publicDir: 'public'
 };`,
-      
+
       'src/app.flux': `component App {
   render {
     <div class="app">
@@ -92,7 +92,7 @@ styles App {
 
 // Mount the app
 mount(App, '#root')`,
-      
+
       'src/pages/home.flux': `@route("/")
 component HomePage {
   state message = "Welcome to {{projectName}}!"
@@ -123,7 +123,7 @@ styles HomePage {
     }
   }
 }`,
-      
+
       'src/pages/about.flux': `@route("/about")
 component AboutPage {
   render {
@@ -165,7 +165,7 @@ styles AboutPage {
     }
   }
 }`,
-      
+
       'src/components/Counter.flux': `component Counter {
   state count = 0
   
@@ -227,7 +227,7 @@ styles Counter {
     }
   }
 }`,
-      
+
       'src/stores/AppStore.flux': `store AppStore {
   state theme = "light"
   state user = null
@@ -248,7 +248,7 @@ styles Counter {
     return user ? \`Hello, \${user.name}!\` : "Welcome, guest!"
   }
 }`,
-      
+
       '.flux/index.html': `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -268,7 +268,7 @@ styles Counter {
     <script type="module" src="../src/app.flux"></script>
 </body>
 </html>`,
-      
+
       'README.md': `# {{projectName}}
 
 A Flux application.
@@ -298,10 +298,10 @@ flux build
 
 - [Flux Documentation](https://flux-lang.dev)
 - [Flux Examples](https://github.com/flux-lang/examples)
-`
-    }
+`,
+    },
   },
-  
+
   minimal: {
     name: 'Minimal Template',
     description: 'Simple Flux application with basic structure',
@@ -313,7 +313,7 @@ flux build
   appDir: '.flux',
   publicDir: 'public'
 };`,
-      
+
       'src/app.flux': `component App {
   state message = "Hello, Flux!"
   
@@ -330,7 +330,7 @@ flux build
 }
 
 mount(App, '#root')`,
-      
+
       '.flux/index.html': `<!DOCTYPE html>
 <html>
 <head>
@@ -340,44 +340,44 @@ mount(App, '#root')`,
     <div id="root"></div>
     <script type="module" src="../src/app.flux"></script>
 </body>
-</html>`
-    }
-  }
+</html>`,
+    },
+  },
 };
 
 export async function createProject(projectName, templateName = 'default') {
   const template = TEMPLATES[templateName];
-  
+
   if (!template) {
     throw new Error(`Unknown template: ${templateName}. Available templates: ${Object.keys(TEMPLATES).join(', ')}`);
   }
-  
+
   // Create project directory
   const projectDir = path.resolve(process.cwd(), projectName);
-  
+
   if (await fs.pathExists(projectDir)) {
     throw new Error(`Directory ${projectName} already exists`);
   }
-  
+
   await fs.ensureDir(projectDir);
-  
+
   console.log(`Creating project with template: ${template.name}`);
   console.log(template.description);
-  
+
   // Create template files
   for (const [filePath, content] of Object.entries(template.files)) {
     const fullPath = path.join(projectDir, filePath);
     const dir = path.dirname(fullPath);
-    
+
     await fs.ensureDir(dir);
-    
+
     // Replace template variables
     const processedContent = content.replace(/\{\{projectName\}\}/g, projectName);
-    
+
     await fs.writeFile(fullPath, processedContent);
     console.log(`Created: ${filePath}`);
   }
-  
+
   // Create package.json
   const packageJson = {
     name: projectName.toLowerCase().replace(/\s+/g, '-'),
@@ -387,20 +387,20 @@ export async function createProject(projectName, templateName = 'default') {
     scripts: {
       dev: 'flux dev',
       build: 'flux build',
-      start: 'flux dev'
+      start: 'flux dev',
     },
     dependencies: {
-      'flux-lang': '^1.0.0'
-    }
+      'flux-lang': '^1.0.0',
+    },
   };
-  
+
   await fs.writeFile(
     path.join(projectDir, 'package.json'),
-    JSON.stringify(packageJson, null, 2)
+    JSON.stringify(packageJson, null, 2),
   );
-  
+
   console.log('Created: package.json');
-  
+
   // Create .gitignore
   const gitignore = `node_modules/
 dist/
@@ -408,13 +408,13 @@ dist/
 *.log
 .DS_Store
 `;
-  
+
   await fs.writeFile(path.join(projectDir, '.gitignore'), gitignore);
   console.log('Created: .gitignore');
-  
+
   console.log(`\n[ok] Project created successfully in ${projectDir}`);
-  console.log(`\nNext steps:`);
+  console.log('\nNext steps:');
   console.log(`  cd ${projectName}`);
-  console.log(`  npm install`);
-  console.log(`  flux dev`);
+  console.log('  npm install');
+  console.log('  flux dev');
 }

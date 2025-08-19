@@ -417,6 +417,13 @@ var TSUnionType = class extends ASTNode {
     this.types = types;
   }
 };
+var ArrowFunctionExpression = class extends ASTNode {
+  constructor(params, body, location) {
+    super("ArrowFunctionExpression", location);
+    this.params = params;
+    this.body = body;
+  }
+};
 function createLocation(startLine, startColumn, endLine, endColumn) {
   return {
     start: { line: startLine, column: startColumn },
@@ -427,6 +434,7 @@ export {
   ASTNode,
   ActionDeclaration,
   ArrayExpression,
+  ArrowFunctionExpression,
   AssignmentExpression,
   BinaryExpression,
   BlockStatement,

@@ -1,0 +1,64 @@
+{
+  "env": {
+    "es2022": true,
+    "node": true,
+    "browser": true
+  },
+  "extends": [
+    "eslint:recommended"
+  ],
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "sourceType": "module"
+  },
+  "rules": {
+    "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+    "no-console": "warn",
+    "no-debugger": "error",
+    "no-alert": "warn",
+    "prefer-const": "error",
+    "no-var": "error",
+    "no-eval": "error",
+    "no-implied-eval": "error",
+    "no-new-func": "error",
+    "no-script-url": "error",
+    "arrow-spacing": "error",
+    "prefer-arrow-callback": "error",
+    "template-curly-spacing": "error",
+    "object-shorthand": "error",
+    "prefer-template": "error",
+    "indent": ["error", 2],
+    "quotes": ["error", "single"],
+    "semi": ["error", "always"],
+    "comma-dangle": ["error", "always-multiline"],
+    "no-trailing-spaces": "error",
+    "eol-last": "error",
+    "no-undef": "off"
+  },
+  "globals": {
+    "component": "readonly",
+    "store": "readonly",
+    "mount": "readonly",
+    "use": "readonly",
+    "effect": "readonly",
+    "computed": "readonly",
+    "action": "readonly",
+    "lifecycle": "readonly",
+    "render": "readonly",
+    "method": "readonly",
+    "state": "readonly",
+    "prop": "readonly",
+    "param": "readonly",
+    "transition": "readonly",
+    "styles": "readonly",
+    "guard": "readonly",
+    "route": "readonly",
+    "meta": "readonly",
+    "loader": "readonly",
+    "errorBoundary": "readonly",
+    "preload": "readonly",
+    "cache": "readonly",
+    "stream": "readonly",
+    "layout": "readonly"
+  }
+}

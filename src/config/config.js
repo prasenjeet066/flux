@@ -10,7 +10,7 @@ export default {
     environment: process.env.NODE_ENV || 'development',
     debug: process.env.NODE_ENV === 'development',
     timezone: 'UTC',
-    locale: 'en-US'
+    locale: 'en-US',
   },
 
   // Server configuration
@@ -23,23 +23,23 @@ export default {
       origin: process.env.CORS_ORIGIN || '*',
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-      credentials: true
+      credentials: true,
     },
     compression: {
       enabled: true,
-      level: 6
+      level: 6,
     },
     rateLimit: {
       enabled: true,
       windowMs: 15 * 60 * 1000, // 15 minutes
-      max: 100 // limit each IP to 100 requests per windowMs
+      max: 100, // limit each IP to 100 requests per windowMs
     },
     security: {
       helmet: true,
       hsts: true,
       xssProtection: true,
-      noSniff: true
-    }
+      noSniff: true,
+    },
   },
 
   // Database configuration
@@ -59,15 +59,15 @@ export default {
       destroyTimeoutMillis: 5000,
       idleTimeoutMillis: 30000,
       reapIntervalMillis: 1000,
-      createRetryIntervalMillis: 200
+      createRetryIntervalMillis: 200,
     },
     migrations: {
       directory: 'src/database/migrations',
-      tableName: 'knex_migrations'
+      tableName: 'knex_migrations',
     },
     seeds: {
-      directory: 'src/database/seeds'
-    }
+      directory: 'src/database/seeds',
+    },
   },
 
   // Redis configuration (for caching and sessions)
@@ -79,7 +79,7 @@ export default {
     db: parseInt(process.env.REDIS_DB) || 0,
     keyPrefix: process.env.REDIS_KEY_PREFIX || 'flux:',
     retryDelayOnFailover: 100,
-    maxRetriesPerRequest: 3
+    maxRetriesPerRequest: 3,
   },
 
   // Storage configuration
@@ -91,15 +91,15 @@ export default {
       uploadsPath: 'uploads',
       tempPath: 'temp',
       maxFileSize: parseInt(process.env.STORAGE_MAX_FILE_SIZE) || 10 * 1024 * 1024, // 10MB
-      allowedTypes: ['image/*', 'text/*', 'application/*']
+      allowedTypes: ['image/*', 'text/*', 'application/*'],
     },
     s3: {
       bucket: process.env.S3_BUCKET,
       region: process.env.S3_REGION || 'us-east-1',
       accessKeyId: process.env.S3_ACCESS_KEY_ID,
       secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
-      endpoint: process.env.S3_ENDPOINT
-    }
+      endpoint: process.env.S3_ENDPOINT,
+    },
   },
 
   // Authentication configuration
@@ -109,10 +109,10 @@ export default {
       expiresIn: process.env.JWT_EXPIRES_IN || '24h',
       refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
       issuer: process.env.JWT_ISSUER || 'flux-app',
-      audience: process.env.JWT_AUDIENCE || 'flux-users'
+      audience: process.env.JWT_AUDIENCE || 'flux-users',
     },
     bcrypt: {
-      rounds: parseInt(process.env.BCRYPT_ROUNDS) || 12
+      rounds: parseInt(process.env.BCRYPT_ROUNDS) || 12,
     },
     session: {
       secret: process.env.SESSION_SECRET || 'your-session-secret',
@@ -121,9 +121,9 @@ export default {
       cookie: {
         secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
-      }
-    }
+        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      },
+    },
   },
 
   // Email configuration
@@ -136,16 +136,16 @@ export default {
       secure: process.env.SMTP_SECURE === 'true',
       auth: {
         user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
-      }
+        pass: process.env.SMTP_PASS,
+      },
     },
     sendgrid: {
-      apiKey: process.env.SENDGRID_API_KEY
+      apiKey: process.env.SENDGRID_API_KEY,
     },
     from: {
       name: process.env.EMAIL_FROM_NAME || 'Flux App',
-      email: process.env.EMAIL_FROM_EMAIL || 'noreply@fluxapp.com'
-    }
+      email: process.env.EMAIL_FROM_EMAIL || 'noreply@fluxapp.com',
+    },
   },
 
   // Logging configuration
@@ -155,15 +155,15 @@ export default {
     transports: {
       console: {
         enabled: true,
-        colorize: process.env.NODE_ENV === 'development'
+        colorize: process.env.NODE_ENV === 'development',
       },
       file: {
         enabled: process.env.LOG_FILE_ENABLED === 'true',
         filename: process.env.LOG_FILE_PATH || 'logs/app.log',
         maxsize: parseInt(process.env.LOG_FILE_MAX_SIZE) || 10 * 1024 * 1024, // 10MB
-        maxFiles: parseInt(process.env.LOG_FILE_MAX_FILES) || 5
-      }
-    }
+        maxFiles: parseInt(process.env.LOG_FILE_MAX_FILES) || 5,
+      },
+    },
   },
 
   // Monitoring and metrics
@@ -171,19 +171,19 @@ export default {
     enabled: process.env.MONITORING_ENABLED === 'true',
     metrics: {
       enabled: true,
-      port: parseInt(process.env.METRICS_PORT) || 9090
+      port: parseInt(process.env.METRICS_PORT) || 9090,
     },
     health: {
       enabled: true,
-      endpoint: '/health'
+      endpoint: '/health',
     },
     tracing: {
       enabled: process.env.TRACING_ENABLED === 'true',
       jaeger: {
         host: process.env.JAEGER_HOST || 'localhost',
-        port: parseInt(process.env.JAEGER_PORT) || 6832
-      }
-    }
+        port: parseInt(process.env.JAEGER_PORT) || 6832,
+      },
+    },
   },
 
   // Queue configuration
@@ -194,7 +194,7 @@ export default {
       host: process.env.QUEUE_REDIS_HOST || process.env.REDIS_HOST || 'localhost',
       port: parseInt(process.env.QUEUE_REDIS_PORT) || process.env.REDIS_PORT || 6379,
       password: process.env.QUEUE_REDIS_PASSWORD || process.env.REDIS_PASSWORD || null,
-      db: parseInt(process.env.QUEUE_REDIS_DB) || 1
+      db: parseInt(process.env.QUEUE_REDIS_DB) || 1,
     },
     defaultJobOptions: {
       removeOnComplete: 100,
@@ -202,9 +202,9 @@ export default {
       attempts: 3,
       backoff: {
         type: 'exponential',
-        delay: 2000
-      }
-    }
+        delay: 2000,
+      },
+    },
   },
 
   // WebSocket configuration
@@ -213,10 +213,10 @@ export default {
     path: process.env.WEBSOCKET_PATH || '/socket.io',
     cors: {
       origin: process.env.WEBSOCKET_CORS_ORIGIN || '*',
-      methods: ['GET', 'POST']
+      methods: ['GET', 'POST'],
     },
     pingTimeout: parseInt(process.env.WEBSOCKET_PING_TIMEOUT) || 60000,
-    pingInterval: parseInt(process.env.WEBSOCKET_PING_INTERVAL) || 25000
+    pingInterval: parseInt(process.env.WEBSOCKET_PING_INTERVAL) || 25000,
   },
 
   // API configuration
@@ -226,7 +226,7 @@ export default {
     rateLimit: {
       enabled: true,
       windowMs: 15 * 60 * 1000, // 15 minutes
-      max: 100 // limit each IP to 100 requests per windowMs
+      max: 100, // limit each IP to 100 requests per windowMs
     },
     documentation: {
       enabled: process.env.API_DOCS_ENABLED !== 'false',
@@ -235,9 +235,9 @@ export default {
         enabled: true,
         title: 'Flux API Documentation',
         version: '2.0.0',
-        description: 'API documentation for Flux application'
-      }
-    }
+        description: 'API documentation for Flux application',
+      },
+    },
   },
 
   // Frontend configuration
@@ -245,7 +245,7 @@ export default {
     build: {
       outputDir: process.env.FRONTEND_BUILD_DIR || 'dist',
       publicPath: process.env.FRONTEND_PUBLIC_PATH || '/',
-      sourceMap: process.env.NODE_ENV === 'development'
+      sourceMap: process.env.NODE_ENV === 'development',
     },
     devServer: {
       port: parseInt(process.env.FRONTEND_DEV_PORT) || 3001,
@@ -253,10 +253,10 @@ export default {
       proxy: {
         '/api': {
           target: `http://localhost:${process.env.PORT || 3000}`,
-          changeOrigin: true
-        }
-      }
-    }
+          changeOrigin: true,
+        },
+      },
+    },
   },
 
   // Testing configuration
@@ -270,12 +270,12 @@ export default {
           branches: 80,
           functions: 80,
           lines: 80,
-          statements: 80
-        }
-      }
+          statements: 80,
+        },
+      },
     },
     parallel: process.env.TESTING_PARALLEL === 'true',
-    maxWorkers: parseInt(process.env.TESTING_MAX_WORKERS) || 4
+    maxWorkers: parseInt(process.env.TESTING_MAX_WORKERS) || 4,
   },
 
   // Development configuration
@@ -283,6 +283,6 @@ export default {
     hotReload: process.env.NODE_ENV === 'development',
     debug: process.env.NODE_ENV === 'development',
     sourceMaps: true,
-    watchMode: process.env.NODE_ENV === 'development'
-  }
+    watchMode: process.env.NODE_ENV === 'development',
+  },
 };

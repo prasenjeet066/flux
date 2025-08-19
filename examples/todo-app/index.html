@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flux Todo App - Flux Language Example</title>
+  <meta name="description" content="A modern todo application built with the Flux programming language">
+  
+  <!-- Flux Language Runtime -->
+  <script type="module" src="../../dist/runtime/index.js"></script>
+  
+  <!-- Flux Language Compiler -->
+  <script type="module" src="../../dist/compiler/index.js"></script>
+  
+  <!-- Todo App Source -->
+  <script type="text/flux" src="app.flux"></script>
+  
+  <style>
+    /* Reset and base styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      color: #333;
+    }
+    
+    /* Loading state */
+    .loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      text-align: center;
+    }
+    
+    .loading h1 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+    
+    .loading p {
+      font-size: 1.2rem;
+      opacity: 0.8;
+    }
+    
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid rgba(255, 255, 255, 0.3);
+      border-top: 4px solid white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 2rem 0;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    /* Error state */
+    .error {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+      color: white;
+      text-align: center;
+      padding: 2rem;
+    }
+    
+    .error h1 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+    
+    .error p {
+      font-size: 1.2rem;
+      margin-bottom: 2rem;
+      max-width: 600px;
+    }
+    
+    .error button {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      background: white;
+      color: #333;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .error button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <!-- Loading state while Flux compiles -->
+    <div class="loading">
+      <h1>🚀 Flux Todo App</h1>
+      <div class="spinner"></div>
+      <p>Compiling with Flux Language...</p>
+      <p>This may take a moment on first load</p>
+    </div>
+  </div>
+
+  <script type="module">
+    // Initialize Flux application
+    import { FluxCompiler, FluxRuntime } from '../../dist/index.js';
+    
+    async function initApp() {
+      try {
+        // Initialize Flux runtime
+        const runtime = new FluxRuntime();
+        
+        // Initialize compiler
+        const compiler = new FluxCompiler();
+        
+        // Compile the Flux source
+        const result = await compiler.compileFile('./app.flux');
+        
+        if (result && result.output) {
+          // Execute the compiled code
+          const app = await runtime.execute(result.output);
+          
+          // Mount the application
+          if (app && app.default) {
+            runtime.mount(app.default, '#root');
+          } else {
+            throw new Error('No default export found in Flux app');
+          }
+        } else {
+          throw new Error('Compilation failed');
+        }
+      } catch (error) {
+        console.error('Failed to initialize Flux app:', error);
+        
+        // Show error state
+        document.getElementById('root').innerHTML = `
+          <div class="error">
+            <h1>❌ Failed to Load</h1>
+            <p>The Flux application failed to compile or load. This might be due to:</p>
+            <ul style="text-align: left; max-width: 500px; margin: 0 auto 2rem auto;">
+              <li>Syntax errors in the Flux code</li>
+              <li>Missing dependencies</li>
+              <li>Runtime compilation issues</li>
+            </ul>
+            <p><strong>Error:</strong> ${error.message}</p>
+            <button onclick="location.reload()">Retry</button>
+          </div>
+        `;
+      }
+    }
+    
+    // Start the application when the page loads
+    document.addEventListener('DOMContentLoaded', initApp);
+  </script>
+</body>
+</html>

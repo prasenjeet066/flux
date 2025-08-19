@@ -21,9 +21,9 @@ class AdvancedTestRunner extends EventEmitter {
       retries: 1,
       bail: false,
       verbose: false,
-      ...options
+      ...options,
     };
-    
+
     this.compiler = new FluxCompiler();
     this.runtime = new FluxRuntime();
     this.tests = [];
@@ -34,14 +34,14 @@ class AdvancedTestRunner extends EventEmitter {
       total: 0,
       duration: 0,
       coverage: {},
-      performance: {}
+      performance: {},
     };
-    
+
     this.workers = new Map();
     this.testQueue = [];
     this.isRunning = false;
     this.startTime = null;
-    
+
     this.setupEventHandlers();
   }
 
@@ -98,8 +98,8 @@ class AdvancedTestRunner extends EventEmitter {
         retries: this.options.retries,
         skip: false,
         only: false,
-        ...options
-      }
+        ...options,
+      },
     });
   }
 
@@ -124,7 +124,7 @@ class AdvancedTestRunner extends EventEmitter {
   describe(name, fn) {
     const currentSuite = this.currentSuite;
     this.currentSuite = { name, parent: currentSuite };
-    
+
     try {
       fn.call(this);
     } finally {
@@ -146,8 +146,8 @@ class AdvancedTestRunner extends EventEmitter {
   assertEqual(actual, expected, message) {
     if (actual !== expected) {
       throw new Error(
-        message || 
-        `Expected ${JSON.stringify(expected)}, but got ${JSON.stringify(actual)}`
+        message ||
+        `Expected ${JSON.stringify(expected)}, but got ${JSON.stringify(actual)}`,
       );
     }
   }
@@ -155,8 +155,8 @@ class AdvancedTestRunner extends EventEmitter {
   assertDeepEqual(actual, expected, message) {
     if (!this.deepEqual(actual, expected)) {
       throw new Error(
-        message || 
-        `Expected ${JSON.stringify(expected)}, but got ${JSON.stringify(actual)}`
+        message ||
+        `Expected ${JSON.stringify(expected)}, but got ${JSON.stringify(actual)}`,
       );
     }
   }
@@ -168,7 +168,7 @@ class AdvancedTestRunner extends EventEmitter {
     } catch (error) {
       if (expectedError && !error.message.includes(expectedError)) {
         throw new Error(
-          `Expected error to contain "${expectedError}", but got "${error.message}"`
+          `Expected error to contain "${expectedError}", but got "${error.message}"`,
         );
       }
     }
@@ -180,10 +180,10 @@ class AdvancedTestRunner extends EventEmitter {
       (error) => {
         if (expectedError && !error.message.includes(expectedError)) {
           throw new Error(
-            `Expected error to contain "${expectedError}", but got "${error.message}"`
+            `Expected error to contain "${expectedError}", but got "${error.message}"`,
           );
         }
-      }
+      },
     );
   }
 
@@ -205,7 +205,7 @@ class AdvancedTestRunner extends EventEmitter {
       mockImplementation(fn) {
         this.implementation = fn;
         return this;
-      }
+      },
     };
 
     // Store mock for later restoration
@@ -219,29 +219,29 @@ class AdvancedTestRunner extends EventEmitter {
   benchmark(name, fn, options = {}) {
     const iterations = options.iterations || 1000;
     const warmup = options.warmup || 100;
-    
+
     // Warmup
     for (let i = 0; i < warmup; i++) {
       fn();
     }
-    
+
     // Actual benchmark
     const start = performance.now();
     for (let i = 0; i < iterations; i++) {
       fn();
     }
     const end = performance.now();
-    
+
     const duration = end - start;
     const avgDuration = duration / iterations;
-    
+
     this.results.performance[name] = {
       iterations,
       totalDuration: duration,
       averageDuration: avgDuration,
-      operationsPerSecond: iterations / (duration / 1000)
+      operationsPerSecond: iterations / (duration / 1000),
     };
-    
+
     if (this.options.verbose) {
       console.log(chalk.cyan(`📊 ${name}: ${avgDuration.toFixed(3)}ms per operation`));
     }
@@ -250,19 +250,19 @@ class AdvancedTestRunner extends EventEmitter {
   // Coverage reporting
   async generateCoverage() {
     if (!this.options.coverage) return;
-    
+
     const coverage = {
       statements: 0,
       branches: 0,
       functions: 0,
       lines: 0,
-      files: []
+      files: [],
     };
-    
+
     // Analyze test results and generate coverage data
     // This is a simplified implementation
     this.results.coverage = coverage;
-    
+
     if (this.options.verbose) {
       console.log(chalk.cyan('📊 Coverage Report:'));
       console.log(chalk.cyan(`   Statements: ${coverage.statements}%`));
@@ -277,58 +277,58 @@ class AdvancedTestRunner extends EventEmitter {
     if (this.isRunning) {
       throw new Error('Test runner is already running');
     }
-    
+
     this.isRunning = true;
     this.startTime = Date.now();
-    
+
     console.log(chalk.blue('🧪 Running Advanced Flux Tests...\n'));
-    
+
     try {
       // Filter tests based on grep pattern
       if (this.options.grep) {
-        this.tests = this.tests.filter(test => 
-          test.name.includes(this.options.grep)
+        this.tests = this.tests.filter(test =>
+          test.name.includes(this.options.grep),
         );
       }
-      
+
       // Filter "only" tests
       const onlyTests = this.tests.filter(test => test.options.only);
       if (onlyTests.length > 0) {
         this.tests = onlyTests;
       }
-      
+
       // Skip tests marked as skip
       this.tests = this.tests.filter(test => !test.options.skip);
-      
+
       this.results.total = this.tests.length;
-      
+
       // Run beforeAll hook
       if (this.beforeAllHook) {
         await this.beforeAllHook();
       }
-      
+
       if (this.options.parallel && this.tests.length > 1) {
         await this.runParallel();
       } else {
         await this.runSequential();
       }
-      
+
       // Run afterAll hook
       if (this.afterAllHook) {
         await this.afterAllHook();
       }
-      
+
       // Generate coverage report
       await this.generateCoverage();
-      
+
       // Generate performance report
       this.generatePerformanceReport();
-      
+
       // Print summary
       this.printSummary();
-      
+
       return this.results;
-      
+
     } finally {
       this.isRunning = false;
       this.cleanup();
@@ -337,15 +337,15 @@ class AdvancedTestRunner extends EventEmitter {
 
   async runParallel() {
     const maxWorkers = Math.min(this.options.maxWorkers, this.tests.length);
-    
+
     // Create workers
     for (let i = 0; i < maxWorkers; i++) {
       await this.createWorker(i);
     }
-    
+
     // Queue all tests
     this.testQueue = [...this.tests];
-    
+
     // Wait for all tests to complete
     while (this.workers.size > 0 || this.testQueue.length > 0) {
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -387,17 +387,17 @@ class AdvancedTestRunner extends EventEmitter {
         }
       });
     `, { eval: true });
-    
+
     this.workers.set(workerId, worker);
     this.emit('worker:ready', workerId);
   }
 
   async processNextTest(workerId = null) {
     if (this.testQueue.length === 0) return;
-    
+
     const test = this.testQueue.shift();
     const availableWorker = workerId || this.getAvailableWorker();
-    
+
     if (availableWorker) {
       const worker = this.workers.get(availableWorker);
       worker.postMessage({ test, context: {} });
@@ -415,30 +415,30 @@ class AdvancedTestRunner extends EventEmitter {
 
   async runTest(test) {
     const startTime = Date.now();
-    
+
     try {
       this.emit('test:start', test);
-      
+
       // Run beforeEach hook
       if (this.beforeEachHook) {
         await this.beforeEachHook();
       }
-      
+
       // Execute test
       await test.fn();
-      
+
       const duration = Date.now() - startTime;
       this.emit('test:pass', test, duration);
-      
+
       // Run afterEach hook
       if (this.afterEachHook) {
         await this.afterEachHook();
       }
-      
+
     } catch (error) {
       const duration = Date.now() - startTime;
       this.emit('test:fail', test, error, duration);
-      
+
       if (this.options.bail) {
         throw error;
       }
@@ -448,7 +448,7 @@ class AdvancedTestRunner extends EventEmitter {
   handleWorkerResult(workerId, result) {
     const test = this.tests.find(t => t.name === result.test);
     if (!test) return;
-    
+
     if (result.type === 'pass') {
       this.emit('test:pass', test, result.duration);
     } else {
@@ -459,7 +459,7 @@ class AdvancedTestRunner extends EventEmitter {
 
   generatePerformanceReport() {
     if (Object.keys(this.results.performance).length === 0) return;
-    
+
     console.log(chalk.cyan('\n📊 Performance Report:'));
     for (const [name, metrics] of Object.entries(this.results.performance)) {
       console.log(chalk.cyan(`   ${name}:`));
@@ -471,8 +471,8 @@ class AdvancedTestRunner extends EventEmitter {
   printSummary() {
     const duration = Date.now() - this.startTime;
     this.results.duration = duration;
-    
-    console.log('\n' + '='.repeat(60));
+
+    console.log(`\n${'='.repeat(60)}`);
     console.log(chalk.blue('📊 Test Summary'));
     console.log('='.repeat(60));
     console.log(chalk.green(`✅ Passed: ${this.results.passed}`));
@@ -480,7 +480,7 @@ class AdvancedTestRunner extends EventEmitter {
     console.log(chalk.yellow(`⏭️  Skipped: ${this.results.skipped}`));
     console.log(chalk.cyan(`📈 Total: ${this.results.total}`));
     console.log(chalk.cyan(`⏱️  Duration: ${duration}ms`));
-    
+
     if (this.results.failed === 0) {
       console.log(chalk.green('\n🎉 All tests passed!'));
     } else {
@@ -495,7 +495,7 @@ class AdvancedTestRunner extends EventEmitter {
       worker.terminate();
     }
     this.workers.clear();
-    
+
     // Restore mocks
     if (this.mocks) {
       for (const [modulePath, mock] of this.mocks) {
@@ -509,7 +509,7 @@ class AdvancedTestRunner extends EventEmitter {
     if (a === b) return true;
     if (typeof a !== typeof b) return false;
     if (a == null || b == null) return a === b;
-    
+
     if (Array.isArray(a) && Array.isArray(b)) {
       if (a.length !== b.length) return false;
       for (let i = 0; i < a.length; i++) {
@@ -517,7 +517,7 @@ class AdvancedTestRunner extends EventEmitter {
       }
       return true;
     }
-    
+
     if (typeof a === 'object') {
       const keysA = Object.keys(a);
       const keysB = Object.keys(b);
@@ -527,7 +527,7 @@ class AdvancedTestRunner extends EventEmitter {
       }
       return true;
     }
-    
+
     return false;
   }
 }
@@ -553,5 +553,5 @@ export const {
   assertThrows,
   assertRejects,
   mock,
-  benchmark
+  benchmark,
 } = testRunner;
